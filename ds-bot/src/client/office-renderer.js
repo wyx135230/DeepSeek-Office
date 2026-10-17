@@ -3,6 +3,7 @@ import { GAME_ART, characterArt, DIRECTIONS, makeRoomArt, makeCharacterSheet } f
 import { createOfficeWorld, findPath, canStand, nearInteraction, facing, WALK_SPEED, RUN_SPEED, REACH, FOOT_RADIUS } from '../shared/office-world.js'
 import { hashOf } from '../shared/office.js'
 import { PIXEL_FONT, installPixelFont, gameLabel } from './office-game-label.js'
+import { officeCameraLayout } from '../shared/office-camera.js'
 
 export async function createOfficeRenderer(element, { floor, lobby = false, reducedMotion = false, onSelect, onExit, onInteract, onHint }) {
   let current = floor, quiet = reducedMotion, selected = null, disposed = false, scene
@@ -54,6 +55,17 @@ export async function createOfficeRenderer(element, { floor, lobby = false, redu
           const steam = this.add.rectangle(87 + i * 3, 95, 1, 3, 0xf3efd0, .6).setDepth(110)
           this.ambient.push(this.tweens.add({ targets: steam, y: 84, x: 89 + i * 3, alpha: 0, duration: 1700, delay: i * 500, repeat: -1, paused: quiet }))
         }
+        for (let i = 0; i < 6; i++) {
+          const x = i % 2 ? 395 : 13, y = 30 + Math.floor(i / 2) * 70
+          const petal = this.add.graphics().fillStyle(0xe8bda6).fillRect(0, 0, 3, 1).fillRect(1, 1, 2, 1).setPosition(x, y).setDepth(-9)
+          this.ambient.push(this.tweens.add({ targets: petal, x: x + 12, y: y + 35, alpha: .15, duration: 4200 + i * 330, delay: i * 550, repeat: -1, paused: quiet }))
+        }
+        const chime = this.add.rectangle(360, 85, 3, 6, 0xd9c7a1).setDepth(81)
+        this.ambient.push(this.tweens.add({ targets: chime, x: 362, duration: 1600, yoyo: true, repeat: -1, paused: quiet }))
+        for (const [i, desk] of world.desks.entries()) {
+          const cursor = this.add.rectangle(desk.x + 29, desk.y + 3, 1, 2, 0xe5edce).setDepth(desk.y + 6)
+          this.ambient.push(this.tweens.add({ targets: cursor, alpha: 0, duration: 500, hold: 250, yoyo: true, repeat: -1, delay: i * 170, paused: quiet }))
+        }
         this.marker = this.add.graphics().setDepth(900)
         this.prompt = gameLabel(this, '').setOrigin(.5, 1).setDepth(1000)
         this.add.bitmapText(216, world.height - 53, 'office-font', 'LIFT', 8).setOrigin(.5, 0).setDepth(1)
@@ -89,13 +101,19 @@ export async function createOfficeRenderer(element, { floor, lobby = false, redu
     }
     cameraSetup() {
       const camera = this.cameras.main
-      const zoom = this.scale.width > 1600 ? 4 : 3
+      const box = element.getBoundingClientRect(), workspace = element.closest('.of-workspace')
+      const top = workspace?.querySelector('.of-game-top')?.getBoundingClientRect()
+      const bottom = workspace?.querySelector('.of-game-bottom')?.getBoundingClientRect()
+      const layout = officeCameraLayout(this.scale.width, this.scale.height, this.world, { top: top ? top.bottom - box.top : 112, bottom: bottom ? box.bottom - bottom.top : 72 })
+      const { zoom, viewport } = layout
+      this.cameraMode = layout.mode
+      camera.stopFollow().setViewport(viewport.x, viewport.y, viewport.width, viewport.height)
       camera.setZoom(zoom).setRoundPixels(true)
-      const padX = Math.max(0, (this.scale.width / zoom - this.world.width) / 2)
-      const padY = Math.max(0, (this.scale.height / zoom - this.world.height) / 2)
+      const padX = Math.max(0, (viewport.width / zoom - this.world.width) / 2)
+      const padY = Math.max(0, (viewport.height / zoom - this.world.height) / 2)
       camera.setBounds(-padX, -padY, this.world.width + 2 * padX, this.world.height + 2 * padY)
-      camera.startFollow(this.player.sprite, true, quiet ? 1 : .12, quiet ? 1 : .12)
-      camera.setDeadzone(36, 24)
+      if (layout.mode === 'overview') camera.centerOn(this.world.width / 2, this.world.height / 2)
+      else { camera.startFollow(this.player.sprite, true, quiet ? 1 : .12, quiet ? 1 : .12); camera.setDeadzone(36, 24) }
     }
     targets() {
       return [...this.world.props, ...this.actors.map(actor => ({ id: actor.id, x: actor.sprite.x, y: actor.sprite.y, label: `Talk to ${actor.label.text}`, actor }))]
@@ -198,8 +216,14 @@ export async function createOfficeRenderer(element, { floor, lobby = false, redu
 
   const game = new Phaser.Game({ type: Phaser.AUTO, parent: element, backgroundColor: '#253b35', width: Math.max(240, element.clientWidth), height: Math.max(240, element.clientHeight), pixelArt: true, roundPixels: true,
     banner: false, audio: { noAudio: true }, input: { keyboard: false }, fps: { target: 60 }, physics: { default: 'arcade', arcade: { gravity: { x: 0, y: 0 }, fps: 60, fixedStep: true } }, scene: Office })
-  const observer = new ResizeObserver(() => { if (!disposed) game.scale.resize(Math.max(240, element.clientWidth), Math.max(240, element.clientHeight)) })
+  const observer = new ResizeObserver(() => {
+    if (disposed) return
+    const width = Math.max(240, element.clientWidth), height = Math.max(240, element.clientHeight)
+    if (game.scale.width !== width || game.scale.height !== height) game.scale.resize(width, height)
+    else scene?.cameraSetup()
+  })
   observer.observe(element)
+  for (const hud of element.closest('.of-workspace')?.querySelectorAll('.of-game-top,.of-game-bottom') ?? []) observer.observe(hud)
   const clearKeys = () => keys.clear()
   const down = event => {
     const key = event.key.toLowerCase()
@@ -221,7 +245,15 @@ export async function createOfficeRenderer(element, { floor, lobby = false, redu
     game.destroy(true)
   }
   try { await ready } catch (error) { destroy(); throw error }
-  const snapshot = () => ({ engine: 'Phaser 4.2.1', fps: Math.round(game.loop.actualFps), fading: scene.cameras.main.fadeEffect.isRunning, camera: { x: scene.cameras.main.scrollX, y: scene.cameras.main.scrollY, zoom: scene.cameras.main.zoom, width: scene.scale.width, height: scene.scale.height }, player: { x: scene.player.sprite.x, y: scene.player.sprite.y, direction: scene.player.direction, frame: scene.player.sprite.frame.name }, nearby: nearby?.id, actors: scene.actors.map(a => ({ id: a.id, x: a.sprite.x, y: a.sprite.y, state: a.state, direction: a.direction })), world: scene.world, canvasCount: element.querySelectorAll('canvas').length })
+  const snapshot = () => {
+    const camera = scene.cameras.main
+    const start = camera.getWorldPoint(camera.x, camera.y), end = camera.getWorldPoint(camera.x + camera.width, camera.y + camera.height)
+    return { engine: 'Phaser 4.2.1', fps: Math.round(game.loop.actualFps), fading: camera.fadeEffect.isRunning,
+      camera: { x: camera.scrollX, y: camera.scrollY, zoom: camera.zoom, width: scene.scale.width, height: scene.scale.height, mode: scene.cameraMode,
+        viewport: { x: camera.x, y: camera.y, width: camera.width, height: camera.height }, visibleWorld: { left: start.x, top: start.y, right: end.x, bottom: end.y } },
+      player: { x: scene.player.sprite.x, y: scene.player.sprite.y, direction: scene.player.direction, frame: scene.player.sprite.frame.name }, nearby: nearby?.id,
+      actors: scene.actors.map(a => ({ id: a.id, x: a.sprite.x, y: a.sprite.y, state: a.state, direction: a.direction })), world: scene.world, canvasCount: element.querySelectorAll('canvas').length }
+  }
   element.__officeDebug = { snapshot }
   return {
     select(id) { selected = id },

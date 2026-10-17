@@ -10,9 +10,9 @@ A personal [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) p
 
 - Every group chat becomes an office floor. The lobby shows each floor's name, purpose, desk count and current activity.
 - Adding or removing a member adds or removes its workstation. Creating a group in the interface opens its office.
-- Shoji windows, timber floors, a tatami tea corner, meeting table and Momo the office dog form the default scene. Locally bundled CC0 Ninja Adventure art is combined with original office furniture.
+- Shoji windows, timber floors, a tatami tea corner, meeting table and Momo the office dog form the default scene. Window light, reading lamps, stationery, tea trays, cushions, a dog bed and a small flower garden add everyday detail. Locally bundled CC0 Ninja Adventure art is combined with original office furniture.
 - Four-direction animated coworkers show actual Harness activity. They return to their desks to work and stroll during breaks.
-- Click to walk around furniture, use WASD or arrow keys, hold Shift to run, and press E near a coworker or object. The camera follows you.
+- Click to walk around furniture, use WASD or arrow keys, hold Shift to run, and press E near a coworker or object. The whole office fits between the desktop HUD bars whenever characters remain legible; only oversized rooms use the following camera. Resizing the window automatically reevaluates the view.
 - Meet coworkers in the room, send group messages or mentions, and open a private chat. The Team menu also provides direct, keyboard-accessible conversations.
 - A Bot's configured model generates a saved pixel portrait and outfit palette. Its outfit colors also customize the directional game character. Describe a new look to regenerate it; built-in characters remain available if generation fails.
 - Choose daytime or moonlit presets, or ask AI for an office palette and atmosphere. Each floor saves its own design.
@@ -31,7 +31,7 @@ The package is an alternative to `ds-bot`, not an additional team shell. In the 
 **DSH Desktop**
 
 1. Open Plugins → Add plugin.
-2. Enter the absolute path of `deepseek-office-0.2.0.tgz` from this build's `artifacts/` folder.
+2. Enter the absolute path of `deepseek-office-0.2.1.tgz` from this build's `artifacts/` folder.
 3. Install, enable and fully restart DSH if requested.
 4. Create a group chat. Its office opens automatically; the sidebar's **Office building** entry opens the lobby.
 
@@ -40,7 +40,7 @@ The package is an alternative to `ds-bot`, not an additional team shell. In the 
 Requires Node.js 22.19 or newer and pnpm. Replace the example path with the local tarball path:
 
 ```sh
-npx @deepseek-ai/dsh@0.2.0-rc.2 plugin --profile web add "/absolute/path/deepseek-office-0.2.0.tgz"
+npx @deepseek-ai/dsh@0.2.0-rc.2 plugin --profile web add "/absolute/path/deepseek-office-0.2.1.tgz"
 npx @deepseek-ai/dsh@0.2.0-rc.2 web
 ```
 
@@ -50,7 +50,7 @@ Character design uses the Bot's configured text model through Harness. It return
 
 Room customization currently changes wall, floor and accent colors plus day/night lighting. Furniture placement and room geometry use the default layout. This provides a base for later AI layout and furniture customization.
 
-The game uses locally bundled Phaser 4.2.1 with Arcade Physics, directional sprite animation, collision-aware routes and a following camera. It starts only when an office is opened and uses WebGL with Canvas fallback. Closing the office destroys the game and its listeners. Quiet motion stops ambient effects and idle wandering while retaining player controls. The plugin interface is English independently of the surrounding Harness language; your names and conversation content are preserved.
+The game uses locally bundled Phaser 4.2.1 with Arcade Physics, directional sprite animation, collision-aware routes and an adaptive overview/following camera. It starts only when an office is opened and uses WebGL with Canvas fallback. Closing the office destroys the game and its listeners. Quiet motion stops drifting petals, the wind chime, steam, monitor cursors and idle wandering while retaining player controls. The plugin interface is English independently of the surrounding Harness language; your names and conversation content are preserved.
 
 ## Development
 
