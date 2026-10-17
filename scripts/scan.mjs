@@ -107,7 +107,10 @@ for (const file of files) {
       for (const match of line.matchAll(rule.re)) {
         if (rule.secret && PLACEHOLDER.test(match[0])) continue
         const shown = rule.secret ? `${match[0].slice(0, 6)}… (${match[0].length} chars)` : snippet(line, match.index, match[0].length)
-        add(rule.level, rule.id, file, index + 1, shown, rule.summary)
+        // These are public dependency documentation and copyright notices, not local data.
+        const publicNotice = rule.id === 'personal-email' && file === 'ds-bot/THIRD-PARTY-NOTICES.txt' && line.trim() === 'Copyright (c) 2013 Jake Rosoman <jkroso@gmail.com>'
+        const publicExample = rule.id === 'personal-path' && file === 'ds-bot/client.js' && /^\s*\*/.test(line) && /C:\/Users\/User\/(?:Documents(?:\/file\.txt)?|file\.txt)['"]/.test(line)
+        add(publicNotice || publicExample ? KEEP : rule.level, rule.id, file, index + 1, shown, rule.summary)
       }
     }
   })
@@ -118,7 +121,7 @@ if (!files.includes('LICENSE')) add(MUST, 'license', 'LICENSE', 0, 'no LICENSE a
 if (!files.includes('ds-bot/package.json')) add(MUST, 'plugin-folder', '.', 0, 'no ds-bot/package.json')
 else {
   const pkg = JSON.parse(readFileSync(join(root, 'ds-bot/package.json'), 'utf8'))
-  if (pkg.name !== 'ds-bot') add(MUST, 'package', 'ds-bot/package.json', 0, `name is "${pkg.name}", expected "ds-bot"`)
+  if (pkg.name !== 'deepseek-office') add(MUST, 'package', 'ds-bot/package.json', 0, `name is "${pkg.name}", expected "deepseek-office"`)
   if (!files.includes('ds-bot/LICENSE')) add(MUST, 'package', 'ds-bot/LICENSE', 0, 'the package has no LICENSE file')
   if (!(pkg.files ?? []).includes('LICENSE')) add(MUST, 'package', 'ds-bot/package.json', 0, '"files" does not list LICENSE')
   for (const field of ['repository', 'homepage', 'bugs']) {

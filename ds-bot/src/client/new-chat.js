@@ -75,6 +75,7 @@ export function NewChat({ mode, roster, actions }) {
     if (text) await actions.send(room.id, text)
     actions.openSession(room.id)
     close()
+    actions.openOffice?.(room.id)
   }
   const createGroup = () => run(makeGroup)
   const sendMessage = () => run(async () => {
@@ -91,6 +92,7 @@ export function NewChat({ mode, roster, actions }) {
     await actions.send(room.id, text)
     actions.openSession(room.id)
     close()
+    actions.openOffice?.(room.id)
   })
   const options = []
   if (!group && picked.length === 0 && mode !== 'search' && wanted === '') {

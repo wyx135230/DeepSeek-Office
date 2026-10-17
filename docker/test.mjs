@@ -96,11 +96,11 @@ try {
   console.log('PASS: group-only migration and restored files with mixed ownership')
 
   shell(`
-    node -e 'const fs = require("node:fs"); const path = "/data/profiles/web/node_modules/ds-bot/package.json"; const pkg = JSON.parse(fs.readFileSync(path)); pkg.version = "0.0.1"; fs.writeFileSync(path, JSON.stringify(pkg))'
+    node -e 'const fs = require("node:fs"); const path = "/data/profiles/web/node_modules/deepseek-office/package.json"; const pkg = JSON.parse(fs.readFileSync(path)); pkg.version = "0.0.1"; fs.writeFileSync(path, JSON.stringify(pkg))'
   `)
   startHelp(1234, 1235)
   shell(`
-    test "$(jq -r .version /data/profiles/web/node_modules/ds-bot/package.json)" = "$(jq -r .version /opt/dsh-template/profiles/web/node_modules/ds-bot/package.json)"
+    test "$(jq -r .version /data/profiles/web/node_modules/deepseek-office/package.json)" = "$(jq -r .version /opt/dsh-template/profiles/web/node_modules/deepseek-office/package.json)"
   `)
   console.log('PASS: offline plugin reinstall after migration')
 

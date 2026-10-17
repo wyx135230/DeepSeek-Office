@@ -126,6 +126,9 @@ export function install(rt) {
           await rt.load()
           await setPrefs(body)
           return ok(state.prefs)
+        case 'office-avatar':
+        case 'office-theme':
+          return ok(await rt.officeEndpoint(endpoint, body, signal))
         case 'exchange': {
           await rt.load()
           const pair = new Set([body.a, body.b])

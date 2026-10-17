@@ -6,6 +6,7 @@ import { botState, BotAvatar, RoomAvatar } from './mark.js'
 import { ActivityIndicator } from './activity-row.js'
 import { clockLabel, openingTurn, unseenSince } from './cells.js'
 import { t } from './i18n.js'
+import { BuildingIcon } from './office.js'
 
 // -------------------------------------------------------------------------
 // Conversation header
@@ -103,6 +104,7 @@ export function HeaderPill({ sessionId, useRoster, useSessions, useSessionStatus
     h('span', { className: 'bt-sr', role: 'status' }, memoryNotice ? t('Memory updated') : ''),
     h(NewMessagePills, { key: sessionId, sessionId, useSessions, useUi, useTurnClock }),
     h(ActivityIndicator, { key: `activity:${sessionId}`, sessionId, useRoster, useSessionStatus, useSession, useLive, actions }),
+    room ? h('button', { type: 'button', className: 'bt-icon-btn', 'aria-label': t('Visit office'), title: t('Visit office'), onClick: () => actions.openOffice(room.id) }, h(BuildingIcon)) : null,
     // DSH's way into its right sidebar sits in the session header this pill replaces.
     actions.hasRightSidebar?.()
       ? h('button', { type: 'button', className: 'bt-icon-btn bt-head-side', 'data-bt-right-sidebar': '', 'aria-label': t('Show or hide the right sidebar'), title: t('Right sidebar'), onClick: () => actions.toggleRightSidebar() }, h(SidePanelIcon))

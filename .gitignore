@@ -9,6 +9,8 @@ node_modules/
 .dsh-home/
 /shots/
 .playwright-mcp/
+/.office-*.log
+/artifacts/
 
 # Extra patterns for scripts/scan.mjs that must not be named in the repository.
 .scan-extra

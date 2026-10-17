@@ -1,110 +1,75 @@
-<p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/images/logo-dark.svg">
-    <img src="docs/images/logo.svg" alt="DeepSeek Bot" width="260">
-  </picture>
-</p>
-
-# DeepSeek Bot
+# DeepSeek Office
 
 [English](README.md) | 中文
 
-![版本](https://img.shields.io/badge/版本-v0.1_预览-blue) ![DSH](https://img.shields.io/badge/DSH-0.2.0--rc.2-4D6BFE) ![许可](https://img.shields.io/badge/许可-Apache_2.0-green)
+基于 [DeepSeek-Office](https://github.com/wyx135230/DeepSeek-Office) 和 DS Bot 改造的个人版 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 插件。保留原有智能体团队和聊天，同时让你走进偏日式、治愈风的像素办公室。
 
-DeepSeek Bot（简称 DS Bot）是一个基于 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)（简称 dsh）的 bot 插件，插件将 dsh 改造为 bot 形式。你可以与自己创建的 bot 交流、工作。
+![像素办公室](docs/images/pixel-office.png)
 
-![和 Chief 说一句话，它就把 bot 和群聊建好](docs/images/team.zh.png)
+## 团队有了自己的小楼
 
-## 安装
+- 一个群聊就是一层办公室。大厅目录展示每层的名称、用途、工位数和工作状态。
+- 群聊增加或移除成员，办公室同步增加或移除工位；在界面中新建群聊会自动进入它的办公室。
+- 默认场景包含障子窗、木地板、绿植、茶角和小猫；场景素材为原创。
+- 智能体根据真实的 Harness 活动表现思考、阅读、工作、发言或等待你处理请求；休息时会喝茶、伸懒腰和散步。
+- 点击地面走动，或使用 WASD / 方向键；按 E 选择同事。点击角色可以打招呼、在群里点名、发送消息或打开私聊。
+- 使用智能体已配置的模型生成各自的像素形象，并保存复用；可以描述新的外观重新生成。未配置模型或生成失败时，内置角色仍可使用。
+- 支持白天、月夜预设，以及 AI 设计办公室配色与氛围；每层独立保存。
+- 没有群聊时不显示办公室入口和场景，单聊保持原版体验；随时可以返回聊天界面。
 
-先装好 dsh，并在 dsh 里配好至少一个模型。ds bot 直接使用 dsh 里的模型。
+保留原项目的长期智能体、群聊协作、记忆、模型选择、权限控制、能力库、定时任务和用量统计，详见[插件参考](ds-bot/README.md)。
 
-**dsh Desktop（Windows、macOS）**
+## 安装本地版本
 
-1. 侧栏点 **插件** → **添加插件**。
-2. **包名或地址** 填 `ds-bot`。在中国大陆，**安装源** 选 **中国大陆镜像源**。
-3. 点 **安装**，再点 **立即启用**。如果提示“下次启动生效”，完全退出 dsh 再打开。
+已在 DSH `0.2.0-rc.2` 上验证。先在 DSH 中配置至少一个模型，用于聊天和 AI 设计。本分支的 npm 包名为 `deepseek-office`；发布个人版本前，请使用本地安装包。
 
-连不上 npm 时，第 2 步也可以填 [Releases](https://github.com/Fei2411/DeepSeek-Bot/releases) 里下载的 `ds-bot-0.1.7.tgz` 的完整路径，或者 `github:Fei2411/DeepSeek-Bot#v0.1.7&path:/ds-bot`（需要装 Git）。
+这是原版 `ds-bot` 的替代版本。请在目标 DSH 配置中先禁用或移除原版 `ds-bot` / 旧版 `dsh-bot` 插件，再启用本插件，保留已有团队数据。两个版本沿用同一个内部团队标识和存储格式，不要同时启用。
 
-**dsh Web（Windows、macOS、Linux）**
+**DSH Desktop**
 
-需要 Node.js `22.19` 以上和 pnpm。
+1. 打开「插件」→「添加插件」。
+2. 填入本次构建 `artifacts/` 目录中 `deepseek-office-0.1.7.tgz` 的绝对路径。
+3. 安装并启用；如果提示重启，请完全退出 DSH 再打开。
+4. 新建群聊会自动进入办公室；侧栏的「办公室大楼」打开大厅。
+
+**DSH Web**
+
+需要 Node.js 22.19 以上和 pnpm，将示例替换为本地安装包的实际路径：
 
 ```sh
-npx @deepseek-ai/dsh@0.2.0-rc.2 plugin --profile web add ds-bot
+npx @deepseek-ai/dsh@0.2.0-rc.2 plugin --profile web add "/absolute/path/deepseek-office-0.1.7.tgz"
 npx @deepseek-ai/dsh@0.2.0-rc.2 web
 ```
 
-**Docker（NAS、Linux 服务器）**
+## AI 设计与初版范围
 
-[`docker/`](docker/) 目录构建一个带 dsh Web 和 DS Bot 的镜像，适合 NAS 或其他常开的机器。容器就是 bot 的沙箱：bot 对挂进容器的目录有完全权限，其他的碰不到。见 [`docker/README.md`](docker/README.md)（英文）。
+形象生成通过 Harness 调用该智能体配置的文本模型，返回经过校验的 16 × 24 像素数据和调色板。首次进入办公室时，缺少形象的成员依次生成，保存后重复使用。重新生成角色、AI 设计房间都会额外调用模型并消耗 token。效果取决于模型能力和可用性；失败时保留已有或内置形象，可以手动重试。
 
-## 配置
+当前房间定制支持墙面、地板、点缀配色和昼夜氛围。家具布局与房间结构使用默认预设，为后续 AI 定制家具和布局留下基础。
 
-我强烈建议你直接通过和 bot 对话来配置其他 bot 和群聊。
-
-## 功能
-
-### Bot
-
-你可以在一个窗口中和一个 bot 完成所有对话和工作，你无需担心背后的上下文问题。你可以在 bot 详情页查看 bot 信息，也可以为 bot 选择你想使用的模型。你可以随时切换模型，但我仍然建议你为一个 bot 长期保持一个模型，仅在真正必要的时刻切换。
-
-另外，bot 拥有记忆，它会记住你的喜好并在下次的工作中应用。你可以在 bot 的详情页管理记忆，也可以直接和 bot 对话来进行管理。
-
-![bot 详情页：模型、记忆、用量](docs/images/details.zh.png)
-
-### Main bot
-
-这个 bot 作为你的 chief，它拥有非常高的权限，可以管理其他 bot 和群聊。第一次进入 ds bot 时，默认会有一个 main bot 叫 Chief。你可以直接和它对话，让它引导你完成配置。
-
-总之，有问题，找 main bot。
-
-### 群聊
-
-ds bot 拥有群聊功能。群聊是非常好的多 bot 协作方式，但它会带来非常明显的费用问题。ds bot 为此特意做了优化：在一个群聊中，你需要设置一个管理员。你的消息默认由管理员回复，它会帮你调用其他 bot。你也可以直接 @ 你需要沟通的 bot，它会直接回应你：输入 @，从列表里选 bot 就行。想让 bot 参考另一段对话，点输入框的 + → 引用对话。
-
-任何 bot 都可以用 @ 把活派给另一个 bot。接活的 bot 自己去做，群聊照常进行。它干活时会在群里同步进度，群聊、侧边栏和它自己的聊天里也能看到它在做什么。做完后，它把结果发到群里，由派活的 bot 接着回应。要停下它的工作，打开群聊详情。
-
-![群聊：管理员 Chief 把活派给写手和程序员](docs/images/group.zh.png)
-
-### 能力
-
-设置 → **能力** 是团队共享的 MCP 服务、技能和能力包列表。在 Bot 设置中启用能力后，从该 Bot 下一条消息开始生效，也适用于它参与的群聊。Bot 添加的本地 MCP 命令需要你先批准才能运行。有其他 Bot 在用的能力，只有你或主 Bot 能修改、删除。
-
-### 用量
-
-在 设置 → 用量 里，可以按时间、按 bot、按模型查看 Token 用量。
-
-![用量页](docs/images/usage.zh.png)
-
-## 数据
-
-所有数据都在你自己的电脑上，在 dsh 主目录（默认 `~/.dsh`）的 `bot/` 和 `sessions/` 里。卸载插件不会删除这些数据。
+像素场景使用本地打包的 PixiJS 8.22.0，只在打开办公室时启动。支持键盘操作、轻动画、响应式布局及后台标签页暂停。场景需要 WebGL；如果无法启动，成员操作和聊天仍然可用。
 
 ## 开发
 
-插件源码在 [`ds-bot/`](ds-bot/)。配置项和内部结构见 [`ds-bot/README.md`](ds-bot/README.md)，开发、测试和协作方式见 [CONTRIBUTING.zh.md](CONTRIBUTING.zh.md)，版本变化见 [CHANGELOG.md](CHANGELOG.md)。
+源码位于 [ds-bot/](ds-bot/)，设计说明见[像素办公室方案](docs/plans/2026-10-17-pixel-office.md)。
 
-## 致谢
+```sh
+cd ds-bot
+npm ci
+npm run harness
+npm run build
+npm test
+node scripts/build-client.mjs --check
+npm run lint
+npm pack --pack-destination ../artifacts
+```
 
-- [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)：ds bot 建在 dsh 的插件系统上。每个 bot 都在 dsh 会话里工作，用的是 dsh 的工具和模型。
-- [esbuild](https://esbuild.github.io/)：用来打包插件的界面代码。
-- 感谢下面这些项目公开的设计思路。ds bot 参考了它们的思路，没有使用它们的代码：
-  - [AgentMemoryRepo](https://github.com/AgentMemoryRepo/agentmemoryrepo)：bot 记忆的 Markdown 格式。
-  - [OpenAI Codex](https://github.com/openai/codex)：压缩时把用户原话留在摘要旁边，以及搜索聊天记录用的消息锚点。
-  - [OpenMausBot](https://github.com/milind-soni/OpenMausBot)：群聊轮流发言和 @ 接力。
-  - [Hermes Agent](https://github.com/NousResearch/hermes-agent) 和 [Hermes Bot Mode](https://github.com/NousResearch/Hermes-Bot-Mode)：每个成员在每个群里一个会话，以及交接时带上用户之前的原话。
-  - [OpenCode](https://github.com/sst/opencode)、[goose](https://github.com/block/goose)、[pi](https://github.com/badlogic/pi-mono)、[Gemini CLI](https://github.com/google-gemini/gemini-cli)：长对话什么时候压缩，交接笔记写哪些内容。
-  - [obelisk](https://github.com/tommy0103/obelisk)：用 SQLite 全文索引搜索聊天记录。
-- 每一位试用 ds bot、提问题、报 bug 的人。
+隔离预览使用 `node dev/office-bench.mjs`，默认端口 3106/8806，使用模拟模型和项目内的 `.dsh-test-office/` 数据，不使用日常 DSH 数据。首次使用需要将插件安装进该测试配置，见[开发说明](ds-bot/README.md#office-development)。按 Ctrl+C 停止。
 
-## 许可
+安装包不包含密钥、聊天记录或模型。团队数据保留在目标 DSH 数据目录的 `bot/` 与 `sessions/` 中，卸载插件不会删除。
 
-[Apache License 2.0](LICENSE)。按“原样”提供，不附带任何担保。用到的第三方代码和它的许可见 [NOTICE](NOTICE)。
+## 来源与许可
 
-## 声明
+本地修改基于 wyx135230/DeepSeek-Office main 提交 `939a6635830cb5b246e7dd19c67b0e1352ad1c07`，项目源于 [DS Bot](https://github.com/Fei2411/DeepSeek-Bot)。保留原作者版权与 Apache-2.0 许可，见 [LICENSE](LICENSE)、[NOTICE](NOTICE)。
 
-ds bot 是独立的社区项目，**不是 DeepSeek 官方产品**，与 DeepSeek 没有隶属、认可或赞助关系。“DeepSeek”“DeepSeek Harness”等名称是各自所有者的商标，这里只用来说明本插件和什么一起用。
-
-bot 会消耗你自己的模型额度，也会按你的要求读写文件、运行命令。重要的操作请自己检查。
+PixiJS 及打包依赖的许可见 [THIRD-PARTY-NOTICES](ds-bot/THIRD-PARTY-NOTICES.txt)。交互设计参考了 [Pixel Agents](https://github.com/pixel-agents-hq/pixel-agents) 和 [Star Office UI](https://github.com/ringhyacinth/Star-Office-UI) 的公开活动可视化思路，未使用其代码或美术素材。

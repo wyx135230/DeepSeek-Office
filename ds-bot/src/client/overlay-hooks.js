@@ -25,7 +25,13 @@ export function usePaneLeft() {
   const [paneLeft, setPaneLeft] = useState(280)
   useLayoutEffect(() => {
     const column = document.querySelector('[class*="_footArea"]')?.parentElement
-    if (column) setPaneLeft(Math.round(column.getBoundingClientRect().right))
+    if (!column) return undefined
+    const measure = () => setPaneLeft(Math.round(column.getBoundingClientRect().right))
+    const observer = new ResizeObserver(measure)
+    observer.observe(column)
+    window.addEventListener('resize', measure)
+    measure()
+    return () => { observer.disconnect(); window.removeEventListener('resize', measure) }
   }, [])
   return paneLeft
 }

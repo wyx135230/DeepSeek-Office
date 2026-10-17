@@ -1,7 +1,7 @@
 {
-  "name": "ds-bot",
+  "name": "deepseek-office",
   "version": "0.1.7",
-  "description": "DS Bot: a team of long-lived Bots for DeepSeek Harness, with Main Bots, Bot-to-Bot messages and group chats",
+  "description": "DeepSeek Office: persistent AI teammates in a cozy, interactive pixel office for DeepSeek Harness",
   "keywords": [
     "dsh-plugin",
     "deepseek-harness",
@@ -11,13 +11,13 @@
     "multi-agent",
     "agents"
   ],
-  "homepage": "https://github.com/Fei2411/DeepSeek-Bot#readme",
+  "homepage": "https://github.com/wyx135230/DeepSeek-Office#readme",
   "bugs": {
-    "url": "https://github.com/Fei2411/DeepSeek-Bot/issues"
+    "url": "https://github.com/wyx135230/DeepSeek-Office/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Fei2411/DeepSeek-Bot.git",
+    "url": "git+https://github.com/wyx135230/DeepSeek-Office.git",
     "directory": "ds-bot"
   },
   "license": "Apache-2.0",
@@ -37,6 +37,8 @@
     "web-search.js",
     "cordis.patch.yml",
     "README.md",
+    "NOTICE",
+    "THIRD-PARTY-NOTICES.txt",
     "LICENSE"
   ],
   "scripts": {
@@ -62,5 +64,8 @@
   },
   "devDependencies": {
     "esbuild": "0.28.2"
+  },
+  "dependencies": {
+    "pixi.js": "8.22.0"
   }
 }

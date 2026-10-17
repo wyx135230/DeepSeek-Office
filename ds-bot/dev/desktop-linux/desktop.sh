@@ -80,8 +80,8 @@ ensure_profile() {
 {
   "name": "dsh-profile-desktop",
   "private": true,
-  "dependencies": { "ds-bot": "link:$PLUGIN" },
-  "dsh": { "profile": { "bundles": ["@deepseek-ai/dsh-base", "@deepseek-ai/dsh-web-app", "ds-bot"] } }
+  "dependencies": { "deepseek-office": "link:$PLUGIN" },
+  "dsh": { "profile": { "bundles": ["@deepseek-ai/dsh-base", "@deepseek-ai/dsh-web-app", "deepseek-office"] } }
 }
 EOF
   printf 'packages:\n  - .\n\nnodeLinker: hoisted\nautoInstallPeers: false\n' > "$profile/pnpm-workspace.yaml"

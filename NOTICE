@@ -35,7 +35,11 @@ MIT License, Copyright (c) 2026 DeepSeek
   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
   SOFTWARE.
 
-No other third-party code is copied into this repository. At run time the
+The DeepSeek Office fork adds an interactive pixel office, original scene art and
+AI-assisted character and palette generation. Its client.js bundles PixiJS and
+related dependencies; see ds-bot/THIRD-PARTY-NOTICES.txt for their licenses.
+
+At run time the
 plugin uses the @deepseek-ai/* packages of the DeepSeek Harness install it
 runs in; they are not bundled. esbuild is a build tool only.
 

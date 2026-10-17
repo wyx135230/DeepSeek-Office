@@ -53,6 +53,7 @@ import { createServer } from 'node:http'
 import { createHash } from 'node:crypto'
 import { appendFileSync, mkdirSync } from 'node:fs'
 import { dirname } from 'node:path'
+import { defaultPixelAvatar } from '../src/shared/office.js'
 import { fileURLToPath } from 'node:url'
 
 const PORT = Number(process.env.MOCK_PORT ?? 8765)
@@ -122,6 +123,14 @@ function decide(body) {
   const me = /You are (.+?), a Bot on the user's team/.exec(system)?.[1] ?? 'Bot'
   const isMain = system.includes('You are the Main Bot')
   const isRelay = system.includes('# Group chat relay')
+  const officePrompt = textOf(last?.content)
+  if (officePrompt.startsWith('Design an original, adorable Japanese slice-of-life pixel-game coworker.')) {
+    const person = /Person: (\{[^\n]+?\})\. User direction:/.exec(officePrompt)?.[1]
+    return [text(JSON.stringify(defaultPixelAvatar(person ? JSON.parse(person) : { id: 'office-mock', name: 'Coworker' })))]
+  }
+  if (officePrompt.startsWith('Design a harmonious color palette for an original cozy Japanese pixel office.')) {
+    return [text(JSON.stringify({ name: 'Rainy reading room', wall: '#d4e0d8', floor: '#b6a083', accent: '#839c99', night: true }))]
+  }
 
   // Summary requests: the Bot's handoff prompt, or the backend's own one when the
   // plugin did not rewrite it. The note names which, and quotes the latest user lines.

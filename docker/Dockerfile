@@ -23,7 +23,7 @@ COPY ds-bot/ /src/ds-bot/
 # The tgz is kept for reinstalls into existing volumes at container start.
 RUN cd /src/ds-bot \
     && npm pack --pack-destination /tmp \
-    && mv /tmp/ds-bot-*.tgz /tmp/ds-bot.tgz \
+    && mv /tmp/deepseek-office-*.tgz /tmp/ds-bot.tgz \
     && DSH_HOME=/opt/dsh-template dsh plugin --profile web add /tmp/ds-bot.tgz
 
 FROM node:24-bookworm-slim
@@ -56,7 +56,7 @@ WORKDIR /workspace
 EXPOSE 3080
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 
-LABEL org.opencontainers.image.title="DS Bot" \
-      org.opencontainers.image.description="A team of long-lived Bots on DeepSeek Harness, served by dsh web" \
-      org.opencontainers.image.source="https://github.com/Fei2411/DeepSeek-Bot" \
+LABEL org.opencontainers.image.title="DeepSeek Office" \
+      org.opencontainers.image.description="Interactive pixel offices for AI teammates on DeepSeek Harness" \
+      org.opencontainers.image.source="https://github.com/wyx135230/DeepSeek-Office" \
       org.opencontainers.image.licenses="Apache-2.0"

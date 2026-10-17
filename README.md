@@ -1,110 +1,75 @@
-<p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/images/logo-dark.svg">
-    <img src="docs/images/logo.svg" alt="DeepSeek Bot" width="260">
-  </picture>
-</p>
-
-# DeepSeek Bot
+# DeepSeek Office
 
 English | [中文](README.zh.md)
 
-![version](https://img.shields.io/badge/version-v0.1_preview-blue) ![DSH](https://img.shields.io/badge/DSH-0.2.0--rc.2-4D6BFE) ![license](https://img.shields.io/badge/license-Apache_2.0-green)
+A personal [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) plugin based on [DeepSeek-Office](https://github.com/wyx135230/DeepSeek-Office) and DS Bot. Keep your existing AI team and chats, and visit them in a gentle Japanese pixel office.
 
-DeepSeek Bot (DS Bot) is a bot plugin for [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) (DSH). It turns DSH into bots. You create your own bots, then talk and work with them.
+![Pixel office](docs/images/pixel-office.png)
 
-![Say one sentence to Chief, and it sets up the bots and the group chat](docs/images/team.png)
+## Your team, in a little building
 
-## Install
+- Every group chat becomes an office floor. The lobby shows each floor's name, purpose, desk count and current activity.
+- Adding or removing a member adds or removes its workstation. Creating a group in the interface opens its office.
+- Shoji windows, wood floors, plants, a tea corner and a friendly cat form the default scene. All scene art is original.
+- Coworkers think, read, work, speak and wait for you according to actual Harness activity. During breaks they sip tea, stretch and stroll.
+- Click to walk, use WASD or arrow keys, and press E to select a coworker. Meet characters, send a group message or a mention, and open a private chat.
+- A Bot's configured model can generate a saved, individual pixel character. Describe a new look to regenerate it. A built-in character remains available if no model is configured or generation fails.
+- Choose daytime or moonlit presets, or ask AI for an office palette and atmosphere. Each floor saves its own design.
+- With no groups, the office entry and scene are absent. Direct chat works as before. Return to chat at any time.
 
-First install DSH and set up at least one model in it. DS Bot uses the models from DSH.
+The original team features remain: long-lived Bots, group relays, memory, model selection, permission controls, capabilities, scheduled tasks and usage. See the [plugin reference](ds-bot/README.md).
 
-**DSH Desktop (Windows, macOS)**
+## Install the local build
 
-1. In the sidebar, select **Plugins** → **Add plugin**.
-2. In **Package name or address**, enter `ds-bot`. In mainland China, set **Registry** to **Mainland China mirror**.
-3. Select **Install**, then **Enable now**. If DSH says the change takes effect at the next start, quit DSH completely and open it again.
+Tested against DSH `0.2.0-rc.2`. Configure at least one model in DSH for chat and AI design. This fork's npm name is `deepseek-office`; use the local package until you publish your own release.
 
-If npm is not reachable, in step 2 you can also enter the full path of `ds-bot-0.1.7.tgz` downloaded from [Releases](https://github.com/Fei2411/DeepSeek-Bot/releases), or `github:Fei2411/DeepSeek-Bot#v0.1.7&path:/ds-bot` (needs Git).
+The package is an alternative to `ds-bot`, not an additional team shell. In the target DSH profile, disable or remove the original `ds-bot` / legacy `dsh-bot` plugin before enabling this one. Keep your existing team data. Both variants use the same internal team identity and storage format.
 
-**DSH Web (Windows, macOS, Linux)**
+**DSH Desktop**
 
-Needs Node.js `22.19` or later, and pnpm.
+1. Open Plugins → Add plugin.
+2. Enter the absolute path of `deepseek-office-0.1.7.tgz` from this build's `artifacts/` folder.
+3. Install, enable and fully restart DSH if requested.
+4. Create a group chat. Its office opens automatically; the sidebar's **Office building** entry opens the lobby.
+
+**DSH Web**
+
+Requires Node.js 22.19 or newer and pnpm. Replace the example path with the local tarball path:
 
 ```sh
-npx @deepseek-ai/dsh@0.2.0-rc.2 plugin --profile web add ds-bot
+npx @deepseek-ai/dsh@0.2.0-rc.2 plugin --profile web add "/absolute/path/deepseek-office-0.1.7.tgz"
 npx @deepseek-ai/dsh@0.2.0-rc.2 web
 ```
 
-**Docker (NAS, Linux server)**
+## AI design and this first version
 
-The [`docker/`](docker/) directory builds an image with DSH Web and DS Bot, for a NAS or any always-on machine. The container is the Bots' sandbox: they get full access to what you mount into it, and nothing else. See [`docker/README.md`](docker/README.md).
+Character design uses the Bot's configured text model through Harness. It returns validated 16 × 24 pixel data and a palette, not executable code. Missing characters are generated sequentially on office entry and saved for reuse. Regeneration and AI room design make additional model calls and use tokens. Model quality and availability affect results; failures keep the previous or built-in design and offer a retry.
 
-## Setup
+Room customization currently changes wall, floor and accent colors plus day/night lighting. Furniture placement and room geometry use the default layout. This provides a base for later AI layout and furniture customization.
 
-I strongly recommend that you set up your other bots and group chats by just talking to a bot.
-
-## Features
-
-### Bot
-
-You can do all your talking and work with one bot, in one window. You don't need to worry about the context behind it. The bot's details page shows its info, and there you can pick the model you want it to use. You can switch models at any time, but I still recommend that you keep one model for a bot for a long time, and switch only when you really need to.
-
-Bots also have memory. A bot remembers what you like and uses it in later work. You can manage its memory on the bot's details page, or just tell the bot.
-
-![Bot details: model, memory, usage](docs/images/details.png)
-
-### Main bot
-
-The main bot is your chief. It has very high rights: it manages the other bots and the group chats. The first time you open DS Bot, there is already a main bot called Chief. Talk to it, and it walks you through the setup.
-
-In short: have a question? Ask the main bot.
-
-### Group chats
-
-DS Bot has group chats. A group chat is a great way to get several bots to work together, but it clearly costs more. So DS Bot does this: every group chat has an admin. The admin answers your messages by default and calls in the other bots for you. You can also @ a bot directly, and it answers you directly: type @ and pick the bot from the list. To give the bots another chat as context, use + → Reference a chat in the message box.
-
-Any bot can hand work to another bot with @. That bot does the work on its own, and the group goes on. While it works, it keeps the group posted, and the group, the sidebar and its own chat show what it is doing. When it is done, it posts the result in the group, and the bot that asked for the work answers. To stop the work, open the group's details.
-
-![Group chat: the admin, Chief, hands the work to Writer and Coder](docs/images/group.png)
-
-### Capabilities
-
-Settings → **Capabilities** is a shared library of MCP servers, skills and packs. Add a capability to a Bot in its settings; it is available from that Bot's next message in its own chat and group chats. A local MCP command that a Bot adds needs your approval before it can run. While other Bots use a capability, only you or a Main Bot can change or delete it.
-
-### Usage
-
-In **Settings** → **Usage**, you can see token usage by time, by bot and by model.
-
-![Usage page](docs/images/usage.png)
-
-## Data
-
-All data stays on your own computer, in `bot/` and `sessions/` in the DSH home folder (`~/.dsh` by default). Uninstalling the plugin does not delete this data.
+The renderer uses locally bundled PixiJS 8.22.0 and starts only when an office is opened. It supports keyboard controls, reduced motion, responsive layout and hidden-tab pausing. WebGL is required for the scene; member controls and chat remain usable if it cannot start.
 
 ## Development
 
-The plugin source is in [`ds-bot/`](ds-bot/). For options and internals, see [`ds-bot/README.md`](ds-bot/README.md). For development, tests and how the team works, see [CONTRIBUTING.md](CONTRIBUTING.md). For changes between versions, see [CHANGELOG.md](CHANGELOG.md).
+Source: [ds-bot/](ds-bot/). Design: [pixel office plan](docs/plans/2026-10-17-pixel-office.md).
 
-## Acknowledgments
+```sh
+cd ds-bot
+npm ci
+npm run harness
+npm run build
+npm test
+node scripts/build-client.mjs --check
+npm run lint
+npm pack --pack-destination ../artifacts
+```
 
-- [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness): DS Bot is built on the DSH plugin system. Every bot works in DSH sessions and uses the DSH tools and models.
-- [esbuild](https://esbuild.github.io/): bundles the plugin's interface code.
-- Thanks to these projects for the ideas they published. DS Bot learned from their designs and does not contain their code:
-  - [AgentMemoryRepo](https://github.com/AgentMemoryRepo/agentmemoryrepo): the Markdown format of Bot memory.
-  - [OpenAI Codex](https://github.com/openai/codex): checkpoints that keep the user's messages next to the summary, and message anchors for chat search.
-  - [OpenMausBot](https://github.com/milind-soni/OpenMausBot): group chat rounds and @mention relays.
-  - [Hermes Agent](https://github.com/NousResearch/hermes-agent) and [Hermes Bot Mode](https://github.com/NousResearch/Hermes-Bot-Mode): one session per member per group chat, and handoffs that carry the earlier user messages.
-  - [OpenCode](https://github.com/sst/opencode), [goose](https://github.com/block/goose), [pi](https://github.com/badlogic/pi-mono) and [Gemini CLI](https://github.com/google-gemini/gemini-cli): when to condense a long chat, and what a handoff note holds.
-  - [obelisk](https://github.com/tommy0103/obelisk): chat search with a SQLite full-text index.
-- Everyone who tries DS Bot, asks questions and reports bugs.
+For an isolated local preview, run `node dev/office-bench.mjs`. It uses mock models and project-local `.dsh-test-office/` data on ports 3106/8806, never your normal DSH home. The first run needs the plugin installed into that test profile; see [development instructions](ds-bot/README.md#office-development). Stop it with Ctrl+C.
 
-## License
+No keys, chats or models are included in the installation package. Existing team data stays in the target DSH home's `bot/` and `sessions/` folders. Uninstalling the plugin does not remove it.
 
-[Apache License 2.0](LICENSE). Provided "as is", without any warranty. Third-party code and its license are listed in [NOTICE](NOTICE).
+## Credits and license
 
-## Disclaimer
+Built from wyx135230/DeepSeek-Office main at `939a6635830cb5b246e7dd19c67b0e1352ad1c07`, based on [DS Bot](https://github.com/Fei2411/DeepSeek-Bot). Original upstream copyright and Apache-2.0 terms are preserved in [LICENSE](LICENSE) and [NOTICE](NOTICE).
 
-DS Bot is an independent community project. **It is not an official DeepSeek product**, and it is not affiliated with, endorsed by or sponsored by DeepSeek. "DeepSeek", "DeepSeek Harness" and the other names are trademarks of their owners. They are used here only to say what this plugin works with.
-
-Bots use your own model quota, and they read and write files and run commands when you ask them to. Check important actions yourself.
+PixiJS and its bundled dependencies have their own licenses in [THIRD-PARTY-NOTICES](ds-bot/THIRD-PARTY-NOTICES.txt). Public activity-visualization ideas from [Pixel Agents](https://github.com/pixel-agents-hq/pixel-agents) and [Star Office UI](https://github.com/ringhyacinth/Star-Office-UI) informed the design; their code and art are not included.

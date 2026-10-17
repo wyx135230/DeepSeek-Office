@@ -1,11 +1,11 @@
 name: Release
 
-# Publishes ds-bot to npm when a GitHub release is published.
+# Publishes deepseek-office to npm when a GitHub release is published.
 #
 # npm Trusted Publishing: npm trusts this workflow through GitHub's OIDC token, so the
-# repository keeps no npm token, and every version gets a provenance statement. It is set
-# up once on npmjs.com: package ds-bot → Settings → Trusted Publisher → GitHub Actions,
-# user Fei2411, repository DeepSeek-Bot, workflow release.yml, no environment.
+# repository keeps no npm token, and every version gets a provenance statement.
+# Configure a Trusted Publisher for the owned deepseek-office npm package before
+# enabling publishing: wyx135230 / DeepSeek-Office / release.yml.
 #
 # The release tag must be v<version in ds-bot/package.json> and must point at a commit on
 # main. A version with a pre-release part (0.2.0-rc.1) goes to the npm tag "next", so that
@@ -90,4 +90,4 @@ jobs:
           TAG: ${{ github.event.release.tag_name }}
         run: |
           npm pack
-          gh release upload "$TAG" "ds-bot-$(node -p "require('./package.json').version").tgz" --clobber
+          gh release upload "$TAG" "deepseek-office-$(node -p "require('./package.json').version").tgz" --clobber
