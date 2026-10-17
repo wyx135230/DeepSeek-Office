@@ -11,7 +11,7 @@ A personal [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) p
 - Every group chat becomes an office floor. The lobby shows each floor's name, purpose, desk count and current activity.
 - Adding or removing a member adds or removes its workstation. Creating a group in the interface opens its office.
 - Shoji windows, timber floors, a tatami tea corner, meeting table and Momo the office dog form the default scene. Window light, reading lamps, stationery, tea trays, cushions, a dog bed and a small flower garden add everyday detail. Locally bundled CC0 Ninja Adventure art is combined with original office furniture.
-- Four-direction animated coworkers show actual Harness activity. They return to their desks to work and stroll during breaks.
+- Full-body coworkers have visible arms, clothing, trouser legs and shoes, with four-direction walk animation and AI outfit colors. They show actual Harness activity, return to their desks to work and stroll during breaks.
 - Click to walk around furniture, use WASD or arrow keys, hold Shift to run, and press E near a coworker or object. The whole office fits between the desktop HUD bars whenever characters remain legible; only oversized rooms use the following camera. Resizing the window automatically reevaluates the view.
 - Meet coworkers in the room, send group messages or mentions, and open a private chat. The Team menu also provides direct, keyboard-accessible conversations.
 - A Bot's configured model generates a saved pixel portrait and outfit palette. Its outfit colors also customize the directional game character. Describe a new look to regenerate it; built-in characters remain available if generation fails.
@@ -31,7 +31,7 @@ The package is an alternative to `ds-bot`, not an additional team shell. In the 
 **DSH Desktop**
 
 1. Open Plugins → Add plugin.
-2. Enter the absolute path of `deepseek-office-0.2.1.tgz` from this build's `artifacts/` folder.
+2. Enter the absolute path of `deepseek-office-0.2.2.tgz` from this build's `artifacts/` folder.
 3. Install, enable and fully restart DSH if requested.
 4. Create a group chat. Its office opens automatically; the sidebar's **Office building** entry opens the lobby.
 
@@ -40,7 +40,7 @@ The package is an alternative to `ds-bot`, not an additional team shell. In the 
 Requires Node.js 22.19 or newer and pnpm. Replace the example path with the local tarball path:
 
 ```sh
-npx @deepseek-ai/dsh@0.2.0-rc.2 plugin --profile web add "/absolute/path/deepseek-office-0.2.1.tgz"
+npx @deepseek-ai/dsh@0.2.0-rc.2 plugin --profile web add "/absolute/path/deepseek-office-0.2.2.tgz"
 npx @deepseek-ai/dsh@0.2.0-rc.2 web
 ```
 

@@ -6,6 +6,7 @@ import traveler from './assets/ninja/character-17.png'
 import host from './assets/ninja/character-25.png'
 import dog from './assets/ninja/character-dog.png'
 import { hashOf } from '../shared/office.js'
+import { CHARACTER, characterBody } from '../shared/office-character.js'
 
 export const GAME_ART = { tiles, elder, scholar, maker, traveler, host, dog }
 export const CAST = ['scholar', 'maker', 'elder', 'host']
@@ -14,24 +15,19 @@ export function characterArt(bot) { return CAST[hashOf(bot.id) % CAST.length] }
 
 export function makeCharacterSheet(source, bot) {
   const canvas = document.createElement('canvas')
-  canvas.width = source.width; canvas.height = source.height
-  const ctx = canvas.getContext('2d', { willReadFrequently: true })
-  ctx.drawImage(source, 0, 0)
-  const color = bot.officeAvatar?.palette?.[4]
-  if (!/^#[0-9a-f]{6}$/i.test(color ?? '')) return canvas
-  const rgb = [1, 3, 5].map(offset => parseInt(color.slice(offset, offset + 2), 16))
-  const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height)
-  // Preserve the licensed directional silhouettes and give all walk frames the AI outfit color.
-  for (let y = 0; y < canvas.height; y++) for (let x = 0; x < canvas.width; x++) {
-    const localX = x % 16, localY = y % 16
-    if (localX < 5 || localX > 10 || localY < 10 || localY > 13) continue
-    const i = (y * canvas.width + x) * 4
-    const [r, g, b, a] = pixels.data.slice(i, i + 4)
-    if (a < 200 || Math.max(r, g, b) < 40 || r > g * 1.45 && g > b * 1.35) continue
-    const shade = Math.max(.55, Math.min(1.15, (r + g + b) / 380))
-    for (let channel = 0; channel < 3; channel++) pixels.data[i + channel] = Math.round(Math.min(255, rgb[channel] * shade))
+  canvas.width = CHARACTER.width * 4; canvas.height = CHARACTER.height * 3
+  const ctx = canvas.getContext('2d')
+  ctx.imageSmoothingEnabled = false
+  const valid = value => /^#[0-9a-f]{6}$/i.test(value ?? '')
+  const coat = valid(bot.officeAvatar?.palette?.[4]) ? bot.officeAvatar.palette[4] : ['#748f83', '#8b94a4', '#b28e75', '#80956d'][hashOf(bot.id) % 4]
+  const rgb = [1, 3, 5].map(offset => parseInt(coat.slice(offset, offset + 2), 16))
+  const highlight = '#' + rgb.map(v => Math.min(255, Math.round(v * 1.17 + 12)).toString(16).padStart(2, '0')).join('')
+  const colors = { o: '#35423f', k: '#e4b58f', c: coat, h: highlight, p: '#465768', s: '#493f38', b: '#e9ddbc' }
+  for (const [direction, column] of Object.entries(DIRECTIONS)) for (let step = 0; step < 3; step++) {
+    const x = column * CHARACTER.width, y = step * CHARACTER.height
+    for (const [yy, row] of characterBody(direction, step).entries()) for (const [xx, pixel] of row.entries()) if (pixel !== '.') { ctx.fillStyle = colors[pixel]; ctx.fillRect(x + xx, y + yy, 1, 1) }
+    ctx.drawImage(source, column * 16, step * 16, 16, CHARACTER.headHeight, x, y, 16, CHARACTER.headHeight)
   }
-  ctx.putImageData(pixels, 0, 0)
   return canvas
 }
 

@@ -16,8 +16,12 @@ repository's original files.
 License: CC0 1.0 Universal. The original repository explicitly permits use,
 modification and redistribution, including commercial games.
 
-The runtime selects four civilian archetypes plus a traveler and dog. Its
-AI outfit-color transformations are derived versions, also provided under CC0.
+The runtime selects four civilian archetypes plus a traveler and dog. Human
+heads are cropped from the first twelve rows of each directional frame and
+combined with original full-length bodies, trousers and shoes in 16x28 frames.
+The original walk-head frames and four directions are retained. The dog keeps
+its original 16x16 frames. AI outfit colors customize the generated clothing.
+These derived character images and original body pixel art are provided under CC0.
 Room composition, office furniture and interface code are original to this fork.
 
 The newer Ninja Adventure pack by Pixel-Boy and AAA was also considered, but

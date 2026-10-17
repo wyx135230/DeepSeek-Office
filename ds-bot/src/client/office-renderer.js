@@ -4,6 +4,7 @@ import { createOfficeWorld, findPath, canStand, nearInteraction, facing, WALK_SP
 import { hashOf } from '../shared/office.js'
 import { PIXEL_FONT, installPixelFont, gameLabel } from './office-game-label.js'
 import { officeCameraLayout } from '../shared/office-camera.js'
+import { CHARACTER, interactionPromptY } from '../shared/office-character.js'
 
 export async function createOfficeRenderer(element, { floor, lobby = false, reducedMotion = false, onSelect, onExit, onInteract, onHint }) {
   let current = floor, quiet = reducedMotion, selected = null, disposed = false, scene
@@ -17,8 +18,8 @@ export async function createOfficeRenderer(element, { floor, lobby = false, redu
     preload() {
       this.load.image('office-font', PIXEL_FONT)
       for (const [name, url] of Object.entries(GAME_ART)) {
-        if (name === 'tiles') this.load.image(name, url)
-        else this.load.spritesheet(name, url, { frameWidth: 16, frameHeight: 16 })
+        if (name === 'dog') this.load.spritesheet(name, url, { frameWidth: 16, frameHeight: 16 })
+        else this.load.image(name, url)
       }
       this.load.once('loaderror', file => rejectReady(new Error(`Could not load ${file.key}`)))
     }
@@ -36,10 +37,11 @@ export async function createOfficeRenderer(element, { floor, lobby = false, redu
           walls.add(block)
         }
         this.physics.world.setBounds(world.bounds.x, world.bounds.y, world.bounds.width, world.bounds.height)
-        for (const name of Object.keys(GAME_ART).filter(key => key !== 'tiles')) for (const [direction, column] of Object.entries(DIRECTIONS)) {
+        this.textures.addSpriteSheet('full-traveler', makeCharacterSheet(this.textures.get('traveler').getSourceImage(), { id: 'traveler' }), { frameWidth: CHARACTER.width, frameHeight: CHARACTER.height })
+        for (const name of ['full-traveler', 'dog']) for (const [direction, column] of Object.entries(DIRECTIONS)) {
           this.anims.create({ key: `${name}-${direction}`, frames: [0, 4, 0, 8].map(row => ({ key: name, frame: column + row })), frameRate: 9, repeat: -1 })
         }
-        this.player = this.actor('traveler', world.spawn, 'You')
+        this.player = this.actor('full-traveler', world.spawn, 'You')
         this.physics.add.collider(this.player.sprite, walls)
         this.actors = current.members.map((member, i) => {
           const desk = world.desks[i]
@@ -85,19 +87,20 @@ export async function createOfficeRenderer(element, { floor, lobby = false, redu
     outfit(bot) {
       const art = characterArt(bot), key = `outfit-${hashOf(bot.id)}-${hashOf(JSON.stringify(bot.officeAvatar))}`
       if (!this.textures.exists(key)) {
-        this.textures.addSpriteSheet(key, makeCharacterSheet(this.textures.get(art).getSourceImage(), bot), { frameWidth: 16, frameHeight: 16 })
+        this.textures.addSpriteSheet(key, makeCharacterSheet(this.textures.get(art).getSourceImage(), bot), { frameWidth: CHARACTER.width, frameHeight: CHARACTER.height })
         for (const [direction, column] of Object.entries(DIRECTIONS)) this.anims.create({ key: `${key}-${direction}`, frames: [0, 4, 0, 8].map(row => ({ key, frame: column + row })), frameRate: 9, repeat: -1 })
       }
       return key
     }
     actor(art, position, name) {
+      const height = art === 'dog' ? 16 : CHARACTER.height, footY = art === 'dog' ? 13 : CHARACTER.footY
       const shadow = this.add.ellipse(position.x, position.y - 2, 12, 5, 0x443e32, .22)
-      const sprite = this.physics.add.sprite(position.x, position.y, art, 0).setOrigin(.5, 13 / 16)
-      sprite.body.setSize(FOOT_RADIUS * 2, FOOT_RADIUS * 2).setOffset(8 - FOOT_RADIUS, 13 - FOOT_RADIUS)
+      const sprite = this.physics.add.sprite(position.x, position.y, art, 0).setOrigin(.5, footY / height)
+      sprite.body.setSize(FOOT_RADIUS * 2, FOOT_RADIUS * 2).setOffset(8 - FOOT_RADIUS, footY - FOOT_RADIUS)
       sprite.setCollideWorldBounds(true)
-      const label = gameLabel(this, name).setPosition(position.x, position.y + 6)
-      const bubble = gameLabel(this, '').setPosition(position.x, position.y - 22).setOrigin(.5, 1).setVisible(false)
-      return { sprite, shadow, label, bubble, art, direction: 'down', state: 'idle' }
+      const label = gameLabel(this, name).setPosition(position.x, position.y + 8)
+      const bubble = gameLabel(this, '').setPosition(position.x, position.y - height - 6).setOrigin(.5, 1).setVisible(false)
+      return { sprite, shadow, label, bubble, art, height, direction: 'down', state: 'idle' }
     }
     cameraSetup() {
       const camera = this.cameras.main
@@ -157,8 +160,8 @@ export async function createOfficeRenderer(element, { floor, lobby = false, redu
       }
       sprite.setDepth(sprite.y)
       shadow.setPosition(sprite.x, sprite.y - 2).setDepth(sprite.y - .1)
-      label.setPosition(sprite.x, sprite.y + 6).setDepth(sprite.y + 1)
-      bubble.setPosition(sprite.x, sprite.y - 21 - (!quiet && actor.state === 'thinking' ? Math.sin(time / 400) : 0)).setDepth(sprite.y + 2)
+      label.setPosition(sprite.x, sprite.y + 8).setDepth(sprite.y + 1)
+      bubble.setPosition(sprite.x, sprite.y - actor.height - 6 - (!quiet && actor.state === 'thinking' ? Math.sin(time / 400) : 0)).setDepth(sprite.y + 2)
     }
     update(time) {
       if (!this.player || disposed) return
@@ -180,7 +183,7 @@ export async function createOfficeRenderer(element, { floor, lobby = false, redu
       const hint = nearby?.label ?? 'Click to walk · WASD / arrows · Shift to run'
       if (hint !== this.lastHint) { this.lastHint = hint; onHint?.(hint) }
       this.prompt.setVisible(Boolean(nearby) && !paused)
-      if (nearby) this.prompt.setText(`E  ${nearby.label}`).setPosition(nearby.x, nearby.y - 29)
+      if (nearby) this.prompt.setText(`E  ${nearby.label}`).setPosition(nearby.x, interactionPromptY(player.y, nearby.y, Boolean(nearby.actor), nearby.actor?.bubble.visible ? nearby.actor.bubble.getBounds().height : 0))
       for (const actor of this.actors) {
         const member = current.members.find(entry => entry.bot.id === actor.id)
         const previousState = actor.state
