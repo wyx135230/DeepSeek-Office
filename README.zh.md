@@ -10,14 +10,17 @@
 
 - 一个群聊就是一层办公室。大厅目录展示每层的名称、用途、工位数和工作状态。
 - 群聊增加或移除成员，办公室同步增加或移除工位；在界面中新建群聊会自动进入它的办公室。
-- 默认场景包含障子窗、木地板、绿植、茶角和小猫；场景素材为原创。
-- 智能体根据真实的 Harness 活动表现思考、阅读、工作、发言或等待你处理请求；休息时会喝茶、伸懒腰和散步。
-- 点击地面走动，或使用 WASD / 方向键；按 E 选择同事。点击角色可以打招呼、在群里点名、发送消息或打开私聊。
-- 使用智能体已配置的模型生成各自的像素形象，并保存复用；可以描述新的外观重新生成。未配置模型或生成失败时，内置角色仍可使用。
+- 默认场景包含障子窗、木地板、榻榻米茶角、会议桌与办公室小狗 Momo。本地打包的 CC0 Ninja Adventure 素材与原创办公家具搭配使用。
+- 智能体使用四方向精灵动画，根据真实 Harness 活动返回工位工作，空闲时散步。
+- 点击地面绕过家具走动，或使用 WASD / 方向键；按住 Shift 跑步，靠近角色或物件后按 E 互动。镜头跟随玩家。
+- 可以在场景中与同事对话、群聊点名或打开私聊；Team 菜单也提供可通过键盘直接进入的对话入口。
+- 使用智能体已配置的模型生成并保存像素肖像与服装配色；配色也应用到四方向游戏角色。可以描述新外观重新生成，失败时保留已有或内置角色。
 - 支持白天、月夜预设，以及 AI 设计办公室配色与氛围；每层独立保存。
 - 没有群聊时不显示办公室入口和场景，单聊保持原版体验；随时可以返回聊天界面。
 
 保留原项目的长期智能体、群聊协作、记忆、模型选择、权限控制、能力库、定时任务和用量统计，详见[插件参考](ds-bot/README.md)。
+
+当前版本先适配电脑端，以键盘和鼠标操作为验收目标；手机适配暂缓。
 
 ## 安装本地版本
 
@@ -28,16 +31,16 @@
 **DSH Desktop**
 
 1. 打开「插件」→「添加插件」。
-2. 填入本次构建 `artifacts/` 目录中 `deepseek-office-0.1.7.tgz` 的绝对路径。
+2. 填入本次构建 `artifacts/` 目录中 `deepseek-office-0.2.0.tgz` 的绝对路径。
 3. 安装并启用；如果提示重启，请完全退出 DSH 再打开。
-4. 新建群聊会自动进入办公室；侧栏的「办公室大楼」打开大厅。
+4. 新建群聊会自动进入办公室；侧栏的 **Office building** 打开大厅。
 
 **DSH Web**
 
 需要 Node.js 22.19 以上和 pnpm，将示例替换为本地安装包的实际路径：
 
 ```sh
-npx @deepseek-ai/dsh@0.2.0-rc.2 plugin --profile web add "/absolute/path/deepseek-office-0.1.7.tgz"
+npx @deepseek-ai/dsh@0.2.0-rc.2 plugin --profile web add "/absolute/path/deepseek-office-0.2.0.tgz"
 npx @deepseek-ai/dsh@0.2.0-rc.2 web
 ```
 
@@ -47,11 +50,11 @@ npx @deepseek-ai/dsh@0.2.0-rc.2 web
 
 当前房间定制支持墙面、地板、点缀配色和昼夜氛围。家具布局与房间结构使用默认预设，为后续 AI 定制家具和布局留下基础。
 
-像素场景使用本地打包的 PixiJS 8.22.0，只在打开办公室时启动。支持键盘操作、轻动画、响应式布局及后台标签页暂停。场景需要 WebGL；如果无法启动，成员操作和聊天仍然可用。
+游戏场景使用本地打包的 Phaser 4.2.1，接入 Arcade Physics、四方向精灵动画、避障寻路和跟随镜头；只在进入办公室时启动，优先使用 WebGL，并支持 Canvas 回退。关闭办公室会销毁游戏和事件监听。Quiet motion 停止环境效果与闲逛，保留玩家操作。插件界面统一为英文，不随 Harness 外壳语言切换；你填写的名称和聊天内容保持原样。
 
 ## 开发
 
-源码位于 [ds-bot/](ds-bot/)，设计说明见[像素办公室方案](docs/plans/2026-10-17-pixel-office.md)。
+源码位于 [ds-bot/](ds-bot/)，设计说明见[办公室 RPG 方案](docs/plans/2026-10-17-office-rpg.md)。
 
 ```sh
 cd ds-bot
@@ -72,4 +75,4 @@ npm pack --pack-destination ../artifacts
 
 本地修改基于 wyx135230/DeepSeek-Office main 提交 `939a6635830cb5b246e7dd19c67b0e1352ad1c07`，项目源于 [DS Bot](https://github.com/Fei2411/DeepSeek-Bot)。保留原作者版权与 Apache-2.0 许可，见 [LICENSE](LICENSE)、[NOTICE](NOTICE)。
 
-PixiJS 及打包依赖的许可见 [THIRD-PARTY-NOTICES](ds-bot/THIRD-PARTY-NOTICES.txt)。交互设计参考了 [Pixel Agents](https://github.com/pixel-agents-hq/pixel-agents) 和 [Star Office UI](https://github.com/ringhyacinth/Star-Office-UI) 的公开活动可视化思路，未使用其代码或美术素材。
+Phaser 与内嵌组件的许可见 [THIRD-PARTY-NOTICES](ds-bot/THIRD-PARTY-NOTICES.txt)。Pixel-Boy / Sparklin Labs 的 [Ninja Adventure](https://github.com/sparklinlabs/superpowers-asset-packs/tree/master/ninja-adventure) 素材采用 CC0 许可，[素材清单](ds-bot/src/client/assets/ninja/SOURCES.md) 固定了来源提交。交互设计参考了 [Pixel Agents](https://github.com/pixel-agents-hq/pixel-agents) 和 [Star Office UI](https://github.com/ringhyacinth/Star-Office-UI) 的公开活动可视化思路，未使用其代码或美术素材。

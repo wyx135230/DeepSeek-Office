@@ -10,14 +10,17 @@ A personal [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) p
 
 - Every group chat becomes an office floor. The lobby shows each floor's name, purpose, desk count and current activity.
 - Adding or removing a member adds or removes its workstation. Creating a group in the interface opens its office.
-- Shoji windows, wood floors, plants, a tea corner and a friendly cat form the default scene. All scene art is original.
-- Coworkers think, read, work, speak and wait for you according to actual Harness activity. During breaks they sip tea, stretch and stroll.
-- Click to walk, use WASD or arrow keys, and press E to select a coworker. Meet characters, send a group message or a mention, and open a private chat.
-- A Bot's configured model can generate a saved, individual pixel character. Describe a new look to regenerate it. A built-in character remains available if no model is configured or generation fails.
+- Shoji windows, timber floors, a tatami tea corner, meeting table and Momo the office dog form the default scene. Locally bundled CC0 Ninja Adventure art is combined with original office furniture.
+- Four-direction animated coworkers show actual Harness activity. They return to their desks to work and stroll during breaks.
+- Click to walk around furniture, use WASD or arrow keys, hold Shift to run, and press E near a coworker or object. The camera follows you.
+- Meet coworkers in the room, send group messages or mentions, and open a private chat. The Team menu also provides direct, keyboard-accessible conversations.
+- A Bot's configured model generates a saved pixel portrait and outfit palette. Its outfit colors also customize the directional game character. Describe a new look to regenerate it; built-in characters remain available if generation fails.
 - Choose daytime or moonlit presets, or ask AI for an office palette and atmosphere. Each floor saves its own design.
 - With no groups, the office entry and scene are absent. Direct chat works as before. Return to chat at any time.
 
 The original team features remain: long-lived Bots, group relays, memory, model selection, permission controls, capabilities, scheduled tasks and usage. See the [plugin reference](ds-bot/README.md).
+
+The current release targets desktop keyboard and mouse use. Phone optimization is deferred.
 
 ## Install the local build
 
@@ -28,7 +31,7 @@ The package is an alternative to `ds-bot`, not an additional team shell. In the 
 **DSH Desktop**
 
 1. Open Plugins → Add plugin.
-2. Enter the absolute path of `deepseek-office-0.1.7.tgz` from this build's `artifacts/` folder.
+2. Enter the absolute path of `deepseek-office-0.2.0.tgz` from this build's `artifacts/` folder.
 3. Install, enable and fully restart DSH if requested.
 4. Create a group chat. Its office opens automatically; the sidebar's **Office building** entry opens the lobby.
 
@@ -37,7 +40,7 @@ The package is an alternative to `ds-bot`, not an additional team shell. In the 
 Requires Node.js 22.19 or newer and pnpm. Replace the example path with the local tarball path:
 
 ```sh
-npx @deepseek-ai/dsh@0.2.0-rc.2 plugin --profile web add "/absolute/path/deepseek-office-0.1.7.tgz"
+npx @deepseek-ai/dsh@0.2.0-rc.2 plugin --profile web add "/absolute/path/deepseek-office-0.2.0.tgz"
 npx @deepseek-ai/dsh@0.2.0-rc.2 web
 ```
 
@@ -47,11 +50,11 @@ Character design uses the Bot's configured text model through Harness. It return
 
 Room customization currently changes wall, floor and accent colors plus day/night lighting. Furniture placement and room geometry use the default layout. This provides a base for later AI layout and furniture customization.
 
-The renderer uses locally bundled PixiJS 8.22.0 and starts only when an office is opened. It supports keyboard controls, reduced motion, responsive layout and hidden-tab pausing. WebGL is required for the scene; member controls and chat remain usable if it cannot start.
+The game uses locally bundled Phaser 4.2.1 with Arcade Physics, directional sprite animation, collision-aware routes and a following camera. It starts only when an office is opened and uses WebGL with Canvas fallback. Closing the office destroys the game and its listeners. Quiet motion stops ambient effects and idle wandering while retaining player controls. The plugin interface is English independently of the surrounding Harness language; your names and conversation content are preserved.
 
 ## Development
 
-Source: [ds-bot/](ds-bot/). Design: [pixel office plan](docs/plans/2026-10-17-pixel-office.md).
+Source: [ds-bot/](ds-bot/). Design: [office RPG plan](docs/plans/2026-10-17-office-rpg.md).
 
 ```sh
 cd ds-bot
@@ -72,4 +75,4 @@ No keys, chats or models are included in the installation package. Existing team
 
 Built from wyx135230/DeepSeek-Office main at `939a6635830cb5b246e7dd19c67b0e1352ad1c07`, based on [DS Bot](https://github.com/Fei2411/DeepSeek-Bot). Original upstream copyright and Apache-2.0 terms are preserved in [LICENSE](LICENSE) and [NOTICE](NOTICE).
 
-PixiJS and its bundled dependencies have their own licenses in [THIRD-PARTY-NOTICES](ds-bot/THIRD-PARTY-NOTICES.txt). Public activity-visualization ideas from [Pixel Agents](https://github.com/pixel-agents-hq/pixel-agents) and [Star Office UI](https://github.com/ringhyacinth/Star-Office-UI) informed the design; their code and art are not included.
+Phaser and embedded components have their licenses in [THIRD-PARTY-NOTICES](ds-bot/THIRD-PARTY-NOTICES.txt). [Ninja Adventure](https://github.com/sparklinlabs/superpowers-asset-packs/tree/master/ninja-adventure) art by Pixel-Boy / Sparklin Labs is CC0; the [asset manifest](ds-bot/src/client/assets/ninja/SOURCES.md) pins the source commit. Public activity-visualization ideas from [Pixel Agents](https://github.com/pixel-agents-hq/pixel-agents) and [Star Office UI](https://github.com/ringhyacinth/Star-Office-UI) informed the design; their code and art are not included.

@@ -7,6 +7,7 @@ import { build } from 'esbuild'
 const bundle = await build({
   entryPoints: [fileURLToPath(new URL('../src/client/header.js', import.meta.url))],
   bundle: true, format: 'cjs', platform: 'node', write: false,
+  loader: { '.png': 'dataurl' },
   external: ['react', 'react-dom', '@deepseek-ai/dsh-client-ui-primitives'],
 })
 const module = { exports: {} }

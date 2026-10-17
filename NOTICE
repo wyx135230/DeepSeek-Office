@@ -35,9 +35,10 @@ MIT License, Copyright (c) 2026 DeepSeek
   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
   SOFTWARE.
 
-The DeepSeek Office fork adds an interactive pixel office, original scene art and
-AI-assisted character and palette generation. Its client.js bundles PixiJS and
-related dependencies; see ds-bot/THIRD-PARTY-NOTICES.txt for their licenses.
+The DeepSeek Office fork adds an interactive Phaser office RPG, original office
+furniture and AI-assisted portrait and outfit-color generation. Its client.js
+bundles Phaser and CC0 Ninja Adventure art by Pixel-Boy / Sparklin Labs; see
+ds-bot/THIRD-PARTY-NOTICES.txt for licenses and pinned asset sources.
 
 At run time the
 plugin uses the @deepseek-ai/* packages of the DeepSeek Harness install it

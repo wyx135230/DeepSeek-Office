@@ -27,6 +27,8 @@ const NOT_PUBLIC = /(^|[\s(`'"]|\.\.\/)(spec|research|backup|shots|attachments|w
 // Migration code and its tests must name the legacy ids (old package name, old theme and
 // color keys) to move saved data over; there, and on lines that say "legacy" (旧版), old names stay.
 const LEGACY_FILES = /(^|\/)(src\/client\/storage\.js|test\/legacy[\w-]*\.test\.js)$/
+// Public author addresses retained verbatim in the pinned Phaser distribution's license footer.
+const PHASER_AUTHORS = new Set(['benjamindrichards@gmail.com', 'samme.npm@gmail.com', 'nicholls.jason@gmail.com', 'ognichenko.igor@gmail.com', 'schteppe@gmail.com', 'pgoloskokovic@gmail.com'])
 
 const extra = extraPatterns()
 
@@ -95,6 +97,7 @@ for (const file of files) {
   const data = readFileSync(join(root, file))
   if (data.includes(0)) continue
   const lines = data.toString('utf8').split('\n')
+  const licenseStart = file === 'ds-bot/client.js' ? lines.findIndex(line => line.startsWith('/*! Bundled license information:')) : -1
   lines.forEach((line, index) => {
     for (const rule of TEXT_RULES) {
       if (rule.files && !rule.files.test(file)) continue
@@ -107,10 +110,10 @@ for (const file of files) {
       for (const match of line.matchAll(rule.re)) {
         if (rule.secret && PLACEHOLDER.test(match[0])) continue
         const shown = rule.secret ? `${match[0].slice(0, 6)}… (${match[0].length} chars)` : snippet(line, match.index, match[0].length)
-        // These are public dependency documentation and copyright notices, not local data.
-        const publicNotice = rule.id === 'personal-email' && file === 'ds-bot/THIRD-PARTY-NOTICES.txt' && line.trim() === 'Copyright (c) 2013 Jake Rosoman <jkroso@gmail.com>'
-        const publicExample = rule.id === 'personal-path' && file === 'ds-bot/client.js' && /^\s*\*/.test(line) && /C:\/Users\/User\/(?:Documents(?:\/file\.txt)?|file\.txt)['"]/.test(line)
-        add(publicNotice || publicExample ? KEEP : rule.level, rule.id, file, index + 1, shown, rule.summary)
+        const publicAuthor = rule.id === 'personal-email' && licenseStart >= 0 && index > licenseStart && lines[licenseStart + 2]?.trim() === 'phaser/dist/phaser.esm.js:' && line.trim().startsWith('* @author') && PHASER_AUTHORS.has(match[0].toLowerCase())
+        // Minification removes the source's LEGACY_PREFIXES variable name.
+        const storedLegacy = rule.id === 'old-package-name' && file === 'ds-bot/client.js' && /^(['"])dsh-bot(?::|-team:|\.browser\.v1)\1/.test(line.slice(match.index - 1))
+        add(publicAuthor || storedLegacy ? KEEP : rule.level, rule.id, file, index + 1, shown, rule.summary)
       }
     }
   })

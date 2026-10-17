@@ -1,247 +1,237 @@
-import { Application, Container, Graphics, Rectangle, Sprite, Text, Texture } from 'pixi.js'
-import { avatarCanvas, catCanvas, roomCanvas } from './office-art.js'
-import { defaultPixelAvatar, hashOf } from '../shared/office.js'
-import { pathTo, stepAlong, walkable } from '../shared/office-motion.js'
+import Phaser from 'phaser'
+import { GAME_ART, characterArt, DIRECTIONS, makeRoomArt, makeCharacterSheet } from './office-game-art.js'
+import { createOfficeWorld, findPath, canStand, nearInteraction, facing, WALK_SPEED, RUN_SPEED, REACH, FOOT_RADIUS } from '../shared/office-world.js'
+import { hashOf } from '../shared/office.js'
+import { PIXEL_FONT, installPixelFont, gameLabel } from './office-game-label.js'
 
-const STATES = {
-  thinking: ['Thinking…', '#8297b0'], typing: ['Working', '#7c9c84'], reading: ['Reading', '#b29970'],
-  speaking: ['Speaking', '#a392b0'], waiting: ['Needs you', '#cf9b54'], away: ['Working elsewhere', '#a2aaa3'],
-  idle: ['On a break', '#8da18a'],
-}
-
-export async function createOfficeRenderer(element, { floor, lobby = false, reducedMotion = false, onSelect, onExit, onError, translate = text => text }) {
-  let disposed = false
-  let ready = false
-  let current = floor
-  let isLobby = lobby
-  let root = null
-  let actors = []
-  let textures = []
-  let petals = []
-  let cat
-  let visitor
-  let visitorPosition = { x: 190, y: floor.layout.height - 70 }
-  let visitorPath = []
+export async function createOfficeRenderer(element, { floor, lobby = false, reducedMotion = false, onSelect, onExit, onInteract, onHint }) {
+  let current = floor, quiet = reducedMotion, selected = null, disposed = false, scene
+  let path = [], destination = null, nearby = null, pending = null, paused = false
   const keys = new Set()
-  let elapsed = 0
-  let selected = null
-  let lastKey = ''
-  const app = new Application()
-  const observer = new ResizeObserver(() => { if (ready && !disposed) resize() })
+  let resolveReady, rejectReady
+  const ready = new Promise((resolve, reject) => { resolveReady = resolve; rejectReady = reject })
 
-  const texture = (image) => {
-    const value = Texture.from(image)
-    value.source.scaleMode = 'nearest'
-    textures.push(value)
-    return value
-  }
-  const text = (value, size = 12, fill = '#514c42') => new Text({ text: value, style: { fontFamily: 'Microsoft YaHei, Meiryo, sans-serif', fontSize: size, fill }, resolution: 2, roundPixels: true })
-
-  function resize() {
-    const width = Math.max(240, element.clientWidth)
-    const height = Math.max(220, element.clientHeight)
-    app.renderer.resize(width, height)
-    if (!root) return
-    const scale = Math.min(width / current.layout.width, height / current.layout.height)
-    root.scale.set(scale)
-    root.position.set(Math.floor((width - current.layout.width * scale) / 2), Math.floor((height - current.layout.height * scale) / 2))
-  }
-
-  function character(bot, position, member = null) {
-    const holder = new Container({ x: position.x, y: position.y })
-    const shadow = new Graphics().ellipse(0, -3, 16, 5).fill({ color: '#685a48', alpha: .18 })
-    const frames = new Map()
-    const getFrame = (state, frame) => {
-      const key = `${state}:${frame % 2}`
-      if (!frames.has(key)) frames.set(key, texture(avatarCanvas(bot, state, frame)))
-      return frames.get(key)
-    }
-    const sprite = new Sprite({ texture: getFrame('idle', 0), anchor: { x: .5, y: 1 }, roundPixels: true })
-    sprite.scale.set(2)
-    const label = text(bot.name, 12)
-    label.anchor.set(.5, 0); label.y = 3
-    const bubble = new Container({ y: -65, visible: false })
-    const bubbleBox = new Graphics()
-    const bubbleLabel = text('', 11)
-    bubbleLabel.anchor.set(.5, .5)
-    bubble.addChild(bubbleBox, bubbleLabel)
-    const halo = new Graphics().ellipse(0, -3, 20, 7).stroke({ width: 2, color: '#749b80' })
-    halo.visible = false
-    holder.addChild(shadow, halo, sprite, label, bubble)
-    if (member) {
-      holder.eventMode = 'static'; holder.cursor = 'pointer'; holder.hitArea = new Rectangle(-30, -64, 60, 88)
-      holder.on('pointertap', event => { event.stopPropagation(); select(bot.id); element.focus({ preventScroll: true }); onSelect?.(bot.id) })
-      holder.on('pointerover', () => { bubble.visible = true })
-      holder.on('pointerout', () => { bubble.visible = selected === bot.id || ['waiting', 'speaking'].includes(current.members.find(entry => entry.bot.id === bot.id)?.state) })
-    }
-    root.addChild(holder)
-    return { bot, holder, sprite, bubble, bubbleBox, bubbleLabel, halo, getFrame, home: { ...position }, position: { ...position }, path: [], phase: -1, member }
-  }
-
-  function updateBubble(actor, state) {
-    const [label, color] = STATES[state] ?? STATES.idle
-    actor.bubbleLabel.text = translate(label)
-    const width = actor.bubbleLabel.width + 16
-    actor.bubbleBox.clear().rect(-width / 2, -12, width, 24).fill('#fbf5e7').stroke({ color, width: 2 })
-      .poly([-4, 12, 2, 17, 5, 12], true).fill('#fbf5e7')
-    actor.bubble.visible = selected === actor.bot.id || ['waiting', 'speaking'].includes(state)
-  }
-
-  function select(id) {
-    selected = id
-    for (const actor of actors) { actor.halo.visible = actor.bot.id === id; updateBubble(actor, actor.member.state) }
-  }
-
-  function rebuild() {
-    if (root) { app.stage.removeChild(root); root.destroy({ children: true }) }
-    for (const value of textures) value.destroy(true)
-    textures = []; actors = []; petals = []
-    root = new Container({ sortableChildren: true, eventMode: 'static', hitArea: new Rectangle(0, 0, current.layout.width, current.layout.height) })
-    const background = new Sprite({ texture: texture(roomCanvas(current, isLobby)), roundPixels: true })
-    background.scale.set(2); background.zIndex = -1000
-    root.addChild(background)
-    const sign = text(isLobby ? translate('Reception') : current.name, 14, '#695d4c')
-    sign.position.set(265, 112); sign.zIndex = -1
-    root.addChild(sign)
-    root.on('pointertap', (event) => {
-      element.focus({ preventScroll: true })
-      const point = root.toLocal(event.global)
-      if (point.x > 155 && point.x < 225 && point.y > current.layout.height - 73) { onExit?.(); return }
-      if (!isLobby) visitorPath = pathTo(visitorPosition, point, current.layout)
-    })
-    const shown = isLobby ? [] : current.members
-    actors = shown.map((member, index) => {
-      const desk = current.layout.desks[index]
-      const actor = character(member.bot, { x: desk.x + 49, y: desk.y + 95 }, member)
-      updateBubble(actor, member.state)
-      return actor
-    })
-    const catFrames = [texture(catCanvas(0)), texture(catCanvas(1))]
-    cat = new Sprite({ texture: catFrames[0], anchor: { x: .5, y: 1 }, roundPixels: true })
-    cat.scale.set(2); cat.position.set(135, current.layout.height - 57); cat.zIndex = cat.y
-    cat.eventMode = 'static'; cat.cursor = 'pointer'
-    cat.on('pointertap', (event) => { event.stopPropagation(); cat.scale.set(2.3); setTimeout(() => { if (!disposed && !cat.destroyed) cat.scale.set(2) }, 240) })
-    cat.officeFrames = catFrames
-    root.addChild(cat)
-    if (!walkable(visitorPosition, current.layout)) visitorPosition = { x: 190, y: current.layout.height - 70 }
-    visitorPath = []
-    visitor = character({ id: 'office-visitor', name: translate('You'), officeAvatar: defaultPixelAvatar({ id: 'office-visitor', name: 'You' }) }, visitorPosition)
-    visitor.holder.zIndex = visitorPosition.y
-    for (let index = 0; index < 12; index++) {
-      const petal = new Graphics().rect(0, 0, 4, 2).fill(index % 2 ? '#d8ab9d' : '#eec7b5')
-      petal.alpha = .7; petal.zIndex = 2000
-      root.addChild(petal)
-      petals.push({ node: petal, phase: index * .83 })
-    }
-    app.stage.addChild(root)
-    select(selected)
-    resize()
-  }
-
-  function update(nextFloor, nextLobby = false) {
-    if (disposed) return
-    const key = `${nextFloor.id}|${nextLobby}|${JSON.stringify(nextFloor.theme)}|${nextFloor.members.map(member => `${member.bot.id}:${member.bot.name}:${member.bot.officeAvatar?.generatedAt ?? 0}`).join(',')}`
-    const changedFloor = current.id !== nextFloor.id || isLobby !== nextLobby
-    current = nextFloor; isLobby = nextLobby
-    if (!ready) return
-    if (changedFloor) visitorPosition = { x: 190, y: current.layout.height - 70 }
-    if (key !== lastKey) { lastKey = key; rebuild() }
-    else actors.forEach((actor, index) => { actor.member = current.members[index]; updateBubble(actor, actor.member.state) })
-  }
-
-  const moveKeys = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'w', 'a', 's', 'd', 'W', 'A', 'S', 'D']
-  const onDown = (event) => {
-    if (moveKeys.includes(event.key) && document.activeElement === element) { event.preventDefault(); keys.add(event.key.toLowerCase()); visitorPath = [] }
-    if ((event.key === 'Enter' || event.key === 'e') && document.activeElement === element && actors.length > 0) {
-      event.preventDefault()
-      const nearest = actors.reduce((a, b) => Math.hypot(a.position.x - visitorPosition.x, a.position.y - visitorPosition.y) < Math.hypot(b.position.x - visitorPosition.x, b.position.y - visitorPosition.y) ? a : b)
-      select(nearest.bot.id); onSelect?.(nearest.bot.id)
-    }
-  }
-  const onUp = event => keys.delete(event.key.toLowerCase())
-  const onBlur = () => keys.clear()
-  const visible = () => {
-    keys.clear()
-    if (!ready || disposed) return
-    if (document.hidden) app.stop(); else app.start()
-  }
-
-  function tick(ticker) {
-    const seconds = Math.min(ticker.deltaMS / 1000, .05)
-    if (!reducedMotion) elapsed += seconds
-    const frame = reducedMotion ? 0 : Math.floor(elapsed * 4) % 2
-    for (const actor of actors) {
-      const state = actor.member.state
-      const phase = Math.floor(elapsed / 8 + hashOf(actor.bot.id) % 20)
-      const idleState = ['tea', 'stretch', 'walk', 'idle'][phase % 4]
-      const resting = state === 'idle' && !reducedMotion
-      if (actor.phase !== phase || !resting) {
-        actor.phase = phase
-        const target = resting && idleState === 'walk' ? { x: actor.home.x + (phase % 2 ? 35 : -35), y: actor.home.y } : actor.home
-        actor.path = pathTo(actor.position, target, current.layout)
+  class Office extends Phaser.Scene {
+    constructor() { super('office') }
+    preload() {
+      this.load.image('office-font', PIXEL_FONT)
+      for (const [name, url] of Object.entries(GAME_ART)) {
+        if (name === 'tiles') this.load.image(name, url)
+        else this.load.spritesheet(name, url, { frameWidth: 16, frameHeight: 16 })
       }
-      const move = stepAlong(actor.position, actor.path, 35, seconds)
-      actor.position = move.position; actor.path = move.path
-      actor.holder.position.set(Math.round(actor.position.x), Math.round(actor.position.y))
-      actor.holder.zIndex = actor.position.y
-      const pose = actor.path.length > 0 ? 'walk' : resting ? idleState : state
-      actor.sprite.texture = actor.getFrame(pose, frame)
-      actor.sprite.alpha = state === 'away' ? .48 : 1
-      if (state === 'thinking') actor.bubble.y = -65 - (reducedMotion ? 0 : Math.round(Math.sin(elapsed * 2) * 2))
+      this.load.once('loaderror', file => rejectReady(new Error(`Could not load ${file.key}`)))
     }
-    if (!isLobby) {
-      let dx = Number(keys.has('arrowright') || keys.has('d')) - Number(keys.has('arrowleft') || keys.has('a'))
-      let dy = Number(keys.has('arrowdown') || keys.has('s')) - Number(keys.has('arrowup') || keys.has('w'))
-      const length = Math.hypot(dx, dy) || 1
-      dx = dx / length * seconds * 115; dy = dy / length * seconds * 115
-      if (walkable({ x: visitorPosition.x + dx, y: visitorPosition.y }, current.layout)) visitorPosition.x += dx
-      if (walkable({ x: visitorPosition.x, y: visitorPosition.y + dy }, current.layout)) visitorPosition.y += dy
-      const moving = stepAlong(visitorPosition, visitorPath, 115, seconds)
-      visitorPosition = moving.position; visitorPath = moving.path
-      visitor.holder.position.set(Math.round(visitorPosition.x), Math.round(visitorPosition.y)); visitor.holder.zIndex = visitorPosition.y
-      visitor.sprite.texture = visitor.getFrame(dx || dy || visitorPath.length ? 'walk' : 'idle', frame)
+    create() {
+      try {
+        scene = this
+        installPixelFont(this, Phaser)
+        this.world = createOfficeWorld(current.members.length, lobby)
+        const world = this.world
+        this.textures.addCanvas('room', makeRoomArt(world, current.theme, this.textures.get('tiles').getSourceImage(), lobby))
+        this.add.image(0, 0, 'room').setOrigin(0).setDepth(-10)
+        const walls = this.physics.add.staticGroup()
+        for (const rect of world.furniture) {
+          const block = this.add.rectangle(rect.x + rect.width / 2, rect.y + rect.height / 2, rect.width, rect.height, 0, 0)
+          walls.add(block)
+        }
+        this.physics.world.setBounds(world.bounds.x, world.bounds.y, world.bounds.width, world.bounds.height)
+        for (const name of Object.keys(GAME_ART).filter(key => key !== 'tiles')) for (const [direction, column] of Object.entries(DIRECTIONS)) {
+          this.anims.create({ key: `${name}-${direction}`, frames: [0, 4, 0, 8].map(row => ({ key: name, frame: column + row })), frameRate: 9, repeat: -1 })
+        }
+        this.player = this.actor('traveler', world.spawn, 'You')
+        this.physics.add.collider(this.player.sprite, walls)
+        this.actors = current.members.map((member, i) => {
+          const desk = world.desks[i]
+          const actor = this.actor(this.outfit(member.bot), { x: desk.x + 24, y: desk.y + 36 }, member.bot.name)
+          actor.id = member.bot.id; actor.home = { x: actor.sprite.x, y: actor.sprite.y }; actor.path = []; actor.phase = -1; actor.avatarKey = JSON.stringify(member.bot.officeAvatar)
+          this.physics.add.collider(actor.sprite, walls)
+          return actor
+        })
+        this.dog = this.actor('dog', world.props.find(p => p.id === 'dog'), 'Momo')
+        this.dog.label.setVisible(false)
+        this.ambient = []
+        for (let i = 0; i < 3; i++) {
+          const steam = this.add.rectangle(87 + i * 3, 95, 1, 3, 0xf3efd0, .6).setDepth(110)
+          this.ambient.push(this.tweens.add({ targets: steam, y: 84, x: 89 + i * 3, alpha: 0, duration: 1700, delay: i * 500, repeat: -1, paused: quiet }))
+        }
+        this.marker = this.add.graphics().setDepth(900)
+        this.prompt = gameLabel(this, '').setOrigin(.5, 1).setDepth(1000)
+        this.add.bitmapText(216, world.height - 53, 'office-font', 'LIFT', 8).setOrigin(.5, 0).setDepth(1)
+        this.cameraSetup()
+        this.cameras.main.fadeIn(quiet ? 0 : 320, 24, 38, 35)
+        this.input.on('pointerdown', pointer => {
+          element.focus({ preventScroll: true })
+          const point = this.cameras.main.getWorldPoint(pointer.x, pointer.y)
+          const target = this.targets().find(t => Math.hypot(t.x - point.x, t.y - point.y) < 14)
+          if (target) this.approach(target)
+          else if (canStand(point, world)) { pending = null; this.go(point) }
+        })
+        this.scale.on('resize', () => this.cameraSetup())
+        resolveReady()
+      } catch (error) { rejectReady(error) }
     }
-    cat.texture = cat.officeFrames[frame]
-    for (const petal of petals) {
-      const phase = elapsed * 8 + petal.phase * 42
-      petal.node.position.set(470 + Math.sin(phase * .02) * 70 + petal.phase * 9, 70 + phase % 220)
-      petal.node.visible = !reducedMotion
+    outfit(bot) {
+      const art = characterArt(bot), key = `outfit-${hashOf(bot.id)}-${hashOf(JSON.stringify(bot.officeAvatar))}`
+      if (!this.textures.exists(key)) {
+        this.textures.addSpriteSheet(key, makeCharacterSheet(this.textures.get(art).getSourceImage(), bot), { frameWidth: 16, frameHeight: 16 })
+        for (const [direction, column] of Object.entries(DIRECTIONS)) this.anims.create({ key: `${key}-${direction}`, frames: [0, 4, 0, 8].map(row => ({ key, frame: column + row })), frameRate: 9, repeat: -1 })
+      }
+      return key
+    }
+    actor(art, position, name) {
+      const shadow = this.add.ellipse(position.x, position.y - 2, 12, 5, 0x443e32, .22)
+      const sprite = this.physics.add.sprite(position.x, position.y, art, 0).setOrigin(.5, 13 / 16)
+      sprite.body.setSize(FOOT_RADIUS * 2, FOOT_RADIUS * 2).setOffset(8 - FOOT_RADIUS, 13 - FOOT_RADIUS)
+      sprite.setCollideWorldBounds(true)
+      const label = gameLabel(this, name).setPosition(position.x, position.y + 6)
+      const bubble = gameLabel(this, '').setPosition(position.x, position.y - 22).setOrigin(.5, 1).setVisible(false)
+      return { sprite, shadow, label, bubble, art, direction: 'down', state: 'idle' }
+    }
+    cameraSetup() {
+      const camera = this.cameras.main
+      const zoom = this.scale.width > 1600 ? 4 : 3
+      camera.setZoom(zoom).setRoundPixels(true)
+      const padX = Math.max(0, (this.scale.width / zoom - this.world.width) / 2)
+      const padY = Math.max(0, (this.scale.height / zoom - this.world.height) / 2)
+      camera.setBounds(-padX, -padY, this.world.width + 2 * padX, this.world.height + 2 * padY)
+      camera.startFollow(this.player.sprite, true, quiet ? 1 : .12, quiet ? 1 : .12)
+      camera.setDeadzone(36, 24)
+    }
+    targets() {
+      return [...this.world.props, ...this.actors.map(actor => ({ id: actor.id, x: actor.sprite.x, y: actor.sprite.y, label: `Talk to ${actor.label.text}`, actor }))]
+    }
+    go(point) {
+      path = findPath(this.player.sprite, point, this.world)
+      destination = path.length ? point : null
+      this.marker.clear()
+      if (destination) this.marker.lineStyle(1, 0xffe4a0, .85).strokeCircle(point.x, point.y - 1, 5).lineBetween(point.x - 2, point.y - 1, point.x + 2, point.y - 1)
+    }
+    approach(target) {
+      if (Math.hypot(this.player.sprite.x - target.x, this.player.sprite.y - target.y) <= REACH && nearInteraction(this.player.sprite, [target], this.world)) { this.interact(target); return }
+      const options = [[0, 16], [16, 0], [-16, 0], [0, -16]].map(([x, y]) => ({ x: target.x + x, y: target.y + y }))
+        .map(point => ({ point, route: findPath(this.player.sprite, point, this.world) })).filter(o => o.route.length)
+        .sort((a, b) => a.route.length - b.route.length)
+      if (!options.length) return
+      pending = target.id; this.go(options[0].point)
+    }
+    interact(target) {
+      path = []; pending = null; this.marker.clear(); this.player.sprite.setVelocity(0)
+      if (target.actor) { target.actor.direction = facing(this.player.sprite.x - target.x, this.player.sprite.y - target.y); onSelect?.(target.id) }
+      else if (target.id === 'lift') onExit?.()
+      else { if (target.id === 'dog' && !quiet) this.tweens.add({ targets: this.dog.sprite, y: this.dog.sprite.y - 4, duration: 110, yoyo: true, repeat: 1 }); onInteract?.(target) }
+    }
+    move(actor, route, speed) {
+      const sprite = actor.sprite
+      while (route.length && Math.hypot(route[0].x - sprite.x, route[0].y - sprite.y) < 2) route.shift()
+      if (!route.length) { sprite.setVelocity(0); return }
+      const dx = route[0].x - sprite.x, dy = route[0].y - sprite.y, d = Math.hypot(dx, dy)
+      sprite.setVelocity(dx / d * speed, dy / d * speed)
+    }
+    animate(actor, time, moving) {
+      const { sprite, shadow, label, bubble } = actor
+      const velocity = sprite.body.velocity
+      actor.direction = facing(velocity.x, velocity.y, actor.direction)
+      if (moving) { sprite.play(`${actor.art}-${actor.direction}`, true); sprite.anims.timeScale = actor === this.player && keys.has('shift') ? 1.45 : 1 }
+      else {
+        sprite.anims.stop()
+        const gesture = !quiet && ['typing', 'speaking', 'waiting'].includes(actor.state) && Math.floor(time / 350) % 3 === 0 ? 4 : 0
+        sprite.setFrame(DIRECTIONS[actor.direction] + gesture)
+      }
+      sprite.setDepth(sprite.y)
+      shadow.setPosition(sprite.x, sprite.y - 2).setDepth(sprite.y - .1)
+      label.setPosition(sprite.x, sprite.y + 6).setDepth(sprite.y + 1)
+      bubble.setPosition(sprite.x, sprite.y - 21 - (!quiet && actor.state === 'thinking' ? Math.sin(time / 400) : 0)).setDepth(sprite.y + 2)
+    }
+    update(time) {
+      if (!this.player || disposed) return
+      const player = this.player.sprite
+      const active = document.activeElement === element && !paused
+      let dx = 0, dy = 0
+      if (active) { dx = Number(keys.has('d') || keys.has('arrowright')) - Number(keys.has('a') || keys.has('arrowleft')); dy = Number(keys.has('s') || keys.has('arrowdown')) - Number(keys.has('w') || keys.has('arrowup')) }
+      if (dx || dy) { path = []; pending = null; this.marker.clear(); const length = Math.hypot(dx, dy), speed = keys.has('shift') ? RUN_SPEED : WALK_SPEED; player.setVelocity(dx / length * speed, dy / length * speed) }
+      else if (!paused) this.move(this.player, path, WALK_SPEED)
+      else player.setVelocity(0)
+      if (!path.length && destination) { destination = null; this.marker.clear() }
+      const targets = this.targets()
+      nearby = nearInteraction(player, targets, this.world)
+      if (pending && !path.length) {
+        const target = targets.find(t => t.id === pending)
+        pending = null
+        if (target && nearInteraction(player, [target], this.world)) this.interact(target)
+      }
+      const hint = nearby?.label ?? 'Click to walk · WASD / arrows · Shift to run'
+      if (hint !== this.lastHint) { this.lastHint = hint; onHint?.(hint) }
+      this.prompt.setVisible(Boolean(nearby) && !paused)
+      if (nearby) this.prompt.setText(`E  ${nearby.label}`).setPosition(nearby.x, nearby.y - 29)
+      for (const actor of this.actors) {
+        const member = current.members.find(entry => entry.bot.id === actor.id)
+        const previousState = actor.state
+        actor.state = member?.state ?? 'idle'
+        const avatarKey = JSON.stringify(member?.bot.officeAvatar)
+        if (member && actor.avatarKey !== avatarKey) {
+          const previous = actor.art
+          actor.art = this.outfit(member.bot); actor.avatarKey = avatarKey; actor.sprite.anims.stop(); actor.sprite.setTexture(actor.art)
+          for (const direction of Object.keys(DIRECTIONS)) this.anims.remove(`${previous}-${direction}`)
+          this.textures.remove(previous)
+        }
+        if (member && actor.label.text !== member.bot.name) actor.label.setText(member.bot.name)
+        const phase = Math.floor((time + hashOf(actor.id) % 12000) / 7000)
+        if (actor.state !== 'idle' && actor.state !== 'away') {
+          if (Math.hypot(actor.sprite.x - actor.home.x, actor.sprite.y - actor.home.y) > 3 && (previousState !== actor.state || !actor.path.length)) actor.path = findPath(actor.sprite, actor.home, this.world)
+          else if (selected !== actor.id) actor.direction = 'up'
+        } else if (!quiet && selected !== actor.id && phase !== actor.phase) {
+          actor.phase = phase
+          const destinations = [actor.home, { x: 120, y: 136 }, { x: 144, y: this.world.height - 80 }, actor.home]
+          actor.path = findPath(actor.sprite, destinations[phase % destinations.length], this.world)
+        }
+        if (quiet || selected === actor.id || pending === actor.id || paused) actor.sprite.setVelocity(0)
+        else this.move(actor, actor.path, 30)
+        const message = { thinking: '…', typing: 'tap tap', reading: 'Reading', speaking: 'Hello!', waiting: '!', away: 'Elsewhere' }[actor.state]
+        actor.bubble.setText(message ?? '').setVisible(Boolean(message))
+        actor.label.setBackgroundColor(selected === actor.id ? '#d9b66b' : '#eadcb7')
+        this.animate(actor, time, actor.sprite.body.speed > 2)
+      }
+      this.animate(this.player, time, player.body.speed > 2)
+      this.animate(this.dog, time, false)
     }
   }
 
-  try {
-    await app.init({ width: Math.max(element.clientWidth, 240), height: Math.max(element.clientHeight, 220), antialias: false, backgroundAlpha: 0, preference: 'webgl', resolution: Math.min(window.devicePixelRatio || 1, 2), autoDensity: true, roundPixels: true })
-    if (disposed) { app.destroy(true, { children: true }); return null }
-    ready = true
-    app.canvas.setAttribute('aria-hidden', 'true')
-    element.appendChild(app.canvas)
-    app.ticker.maxFPS = reducedMotion ? 12 : 30
-    update(floor, lobby)
-    app.ticker.add(tick)
-    app.render()
-    observer.observe(element)
-    element.addEventListener('keydown', onDown); window.addEventListener('keyup', onUp); element.addEventListener('blur', onBlur)
-    document.addEventListener('visibilitychange', visible)
-    visible()
-  } catch (error) {
-    disposed = true; observer.disconnect()
-    if (ready) app.destroy(true, { children: true })
-    onError?.(error)
-    throw error
+  const game = new Phaser.Game({ type: Phaser.AUTO, parent: element, backgroundColor: '#253b35', width: Math.max(240, element.clientWidth), height: Math.max(240, element.clientHeight), pixelArt: true, roundPixels: true,
+    banner: false, audio: { noAudio: true }, input: { keyboard: false }, fps: { target: 60 }, physics: { default: 'arcade', arcade: { gravity: { x: 0, y: 0 }, fps: 60, fixedStep: true } }, scene: Office })
+  const observer = new ResizeObserver(() => { if (!disposed) game.scale.resize(Math.max(240, element.clientWidth), Math.max(240, element.clientHeight)) })
+  observer.observe(element)
+  const clearKeys = () => keys.clear()
+  const down = event => {
+    const key = event.key.toLowerCase()
+    if (['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'shift', 'e', 'enter'].includes(key)) {
+      event.preventDefault(); event.stopPropagation(); keys.add(key)
+      if ((key === 'e' || key === 'enter') && !event.repeat && nearby && !paused) scene?.interact(nearby)
+    }
   }
+  const up = event => keys.delete(event.key.toLowerCase())
+  const touch = event => { const { key, pressed } = event.detail; element.focus({ preventScroll: true }); if (pressed) { if (key === 'e' && nearby) scene?.interact(nearby); else keys.add(key) } else keys.delete(key) }
+  element.addEventListener('keydown', down); element.addEventListener('blur', clearKeys); element.addEventListener('office-control', touch)
+  window.addEventListener('keyup', up); window.addEventListener('blur', clearKeys)
+  const destroy = () => {
+    if (disposed) return
+    disposed = true; observer.disconnect(); keys.clear()
+    element.removeEventListener('keydown', down); element.removeEventListener('blur', clearKeys); element.removeEventListener('office-control', touch)
+    window.removeEventListener('keyup', up); window.removeEventListener('blur', clearKeys)
+    delete element.__officeDebug
+    game.destroy(true)
+  }
+  try { await ready } catch (error) { destroy(); throw error }
+  const snapshot = () => ({ engine: 'Phaser 4.2.1', fps: Math.round(game.loop.actualFps), fading: scene.cameras.main.fadeEffect.isRunning, camera: { x: scene.cameras.main.scrollX, y: scene.cameras.main.scrollY, zoom: scene.cameras.main.zoom, width: scene.scale.width, height: scene.scale.height }, player: { x: scene.player.sprite.x, y: scene.player.sprite.y, direction: scene.player.direction, frame: scene.player.sprite.frame.name }, nearby: nearby?.id, actors: scene.actors.map(a => ({ id: a.id, x: a.sprite.x, y: a.sprite.y, state: a.state, direction: a.direction })), world: scene.world, canvasCount: element.querySelectorAll('canvas').length })
+  element.__officeDebug = { snapshot }
   return {
-    update,
-    select,
-    setReducedMotion(value) { reducedMotion = value; app.ticker.maxFPS = value ? 12 : 30 },
-    snapshot: () => ({ floorId: current.id, lobby: isLobby, desks: isLobby ? 0 : actors.length, members: actors.map(actor => ({ id: actor.bot.id, state: actor.member.state })), visitor: { ...visitorPosition } }),
-    destroy() {
-      if (disposed) return
-      disposed = true; observer.disconnect(); keys.clear()
-      element.removeEventListener('keydown', onDown); window.removeEventListener('keyup', onUp); element.removeEventListener('blur', onBlur)
-      document.removeEventListener('visibilitychange', visible)
-      app.destroy(true, { children: true })
-      for (const value of textures) if (!value.destroyed) value.destroy(true)
-      textures = []
-    },
+    select(id) { selected = id },
+    approach(id) { const target = scene.targets().find(t => t.id === id); if (target) scene.approach(target) },
+    setPaused(value) { paused = value; if (value) clearKeys() },
+    setReducedMotion(value) { quiet = value; for (const tween of scene.ambient ?? []) { if (value) tween.pause(); else tween.resume() } },
+    update(next) {
+      const themeChanged = JSON.stringify(current.theme) !== JSON.stringify(next.theme)
+      current = next
+      if (themeChanged && scene) { const texture = scene.textures.get('room'); texture.context.clearRect(0, 0, texture.width, texture.height); texture.context.drawImage(makeRoomArt(scene.world, next.theme, scene.textures.get('tiles').getSourceImage(), lobby), 0, 0); texture.refresh() }
+    }, snapshot, destroy,
   }
 }

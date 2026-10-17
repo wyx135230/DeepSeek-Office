@@ -1,6 +1,6 @@
 {
   "name": "deepseek-office",
-  "version": "0.1.7",
+  "version": "0.2.0",
   "description": "DeepSeek Office: persistent AI teammates in a cozy, interactive pixel office for DeepSeek Harness",
   "keywords": [
     "dsh-plugin",
@@ -39,6 +39,8 @@
     "README.md",
     "NOTICE",
     "THIRD-PARTY-NOTICES.txt",
+    "src/client/assets/ninja/LICENSE.txt",
+    "src/client/assets/ninja/SOURCES.md",
     "LICENSE"
   ],
   "scripts": {
@@ -66,6 +68,6 @@
     "esbuild": "0.28.2"
   },
   "dependencies": {
-    "pixi.js": "8.22.0"
+    "phaser": "4.2.1"
   }
 }

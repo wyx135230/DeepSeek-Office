@@ -1008,7 +1008,7 @@ export function installLocale(locale) {
 }
 
 export function t(key, params) {
-  return bound ? bound(key, params) : fill(key, params)
+  return language().startsWith('zh') && bound ? bound(key, params) : fill(key, params)
 }
 
 // A message from the host, in the interface language.
@@ -1021,10 +1021,9 @@ export function hostText(message) {
   return message
 }
 
-// The active DSH language tag, for dates and times.
+// The plugin's interface is English even when the surrounding Harness is localized.
 export function language() {
-  const active = service?.getLocale?.().active
-  return typeof active === 'string' ? active : 'en'
+  return 'en'
 }
 
 export const dateLocale = () => (language().startsWith('zh') ? 'zh-CN' : 'en-US')

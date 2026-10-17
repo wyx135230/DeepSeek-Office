@@ -27,9 +27,11 @@ export async function bundleClient() {
     platform: 'browser',
     target: 'es2022',
     external: PLATFORM_MODULES,
-    // Every source declaration ships, used or not, as in the hand-written bundle.
-    treeShaking: false,
-    // Readable for debugging in the browser: no minification, and Chinese text stays text.
+    loader: { '.png': 'dataurl' },
+    // The engine is local and lazy; compact its distribution for plugin startup.
+    treeShaking: true,
+    minify: true,
+    legalComments: 'eof',
     charset: 'utf8',
     write: false,
     logLevel: 'silent',
