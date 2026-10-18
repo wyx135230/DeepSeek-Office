@@ -1,0 +1,202 @@
+[
+  {
+    "file": "m-body-walk.png",
+    "path": "Characters/Body/Body 02 - Masculine, Thin/Peach/Walk.png"
+  },
+  {
+    "file": "m-pants-walk.png",
+    "path": "Characters/Clothing/Masculine, Thin/Legs/Pants 03 - Pants/Navy/Walk.png"
+  },
+  {
+    "file": "m-shoes-walk.png",
+    "path": "Characters/Clothing/Masculine, Thin/Feet/Shoes 01 - Shoes/Chocolate/Walk.png"
+  },
+  {
+    "file": "m-shirt-walk.png",
+    "path": "Characters/Clothing/Masculine, Thin/Torso/Shirt 07 - Buttoned Longsleeve Shirt/Fern/Walk.png"
+  },
+  {
+    "file": "m-head-walk.png",
+    "path": "Characters/Head/Head 02 - Masculine/Peach/Walk.png"
+  },
+  {
+    "file": "m-hair-walk.png",
+    "path": "Characters/Hair/Short 02 - Parted/Chestnut/Walk.png"
+  },
+  {
+    "file": "m-body-idle.png",
+    "path": "Characters/Body/Body 02 - Masculine, Thin/Peach/Idle.png"
+  },
+  {
+    "file": "m-pants-idle.png",
+    "path": "Characters/Clothing/Masculine, Thin/Legs/Pants 03 - Pants/Navy/Idle.png"
+  },
+  {
+    "file": "m-shoes-idle.png",
+    "path": "Characters/Clothing/Masculine, Thin/Feet/Shoes 01 - Shoes/Chocolate/Idle.png"
+  },
+  {
+    "file": "m-shirt-idle.png",
+    "path": "Characters/Clothing/Masculine, Thin/Torso/Shirt 07 - Buttoned Longsleeve Shirt/Fern/Idle.png"
+  },
+  {
+    "file": "m-head-idle.png",
+    "path": "Characters/Head/Head 02 - Masculine/Peach/Idle.png"
+  },
+  {
+    "file": "m-hair-idle.png",
+    "path": "Characters/Hair/Short 02 - Parted/Chestnut/Idle.png"
+  },
+  {
+    "file": "m-body-sitting.png",
+    "path": "Characters/Body/Body 02 - Masculine, Thin/Peach/Sitting.png"
+  },
+  {
+    "file": "m-pants-sitting.png",
+    "path": "Characters/Clothing/Masculine, Thin/Legs/Pants 03 - Pants/Navy/Sitting.png"
+  },
+  {
+    "file": "m-shoes-sitting.png",
+    "path": "Characters/Clothing/Masculine, Thin/Feet/Shoes 01 - Shoes/Chocolate/Sitting.png"
+  },
+  {
+    "file": "m-shirt-sitting.png",
+    "path": "Characters/Clothing/Masculine, Thin/Torso/Shirt 07 - Buttoned Longsleeve Shirt/Fern/Sitting.png"
+  },
+  {
+    "file": "m-head-sitting.png",
+    "path": "Characters/Head/Head 02 - Masculine/Peach/Sitting.png"
+  },
+  {
+    "file": "m-hair-sitting.png",
+    "path": "Characters/Hair/Short 02 - Parted/Chestnut/Sitting.png"
+  },
+  {
+    "file": "f-body-walk.png",
+    "path": "Characters/Body/Body 01 - Feminine, Thin/Honey/Walk.png"
+  },
+  {
+    "file": "f-pants-walk.png",
+    "path": "Characters/Clothing/Feminine, Thin/Legs/Pants 03 - Pants/Navy/Walk.png"
+  },
+  {
+    "file": "f-shoes-walk.png",
+    "path": "Characters/Clothing/Feminine, Thin/Feet/Shoes 01 - Shoes/Chocolate/Walk.png"
+  },
+  {
+    "file": "f-shirt-walk.png",
+    "path": "Characters/Clothing/Feminine, Thin/Torso/Shirt 07 - Buttoned Longsleeve Shirt/Fern/Walk.png"
+  },
+  {
+    "file": "f-head-walk.png",
+    "path": "Characters/Head/Head 01 - Feminine/Honey/Walk.png"
+  },
+  {
+    "file": "f-hair-walk.png",
+    "path": "Characters/Hair/Medium 07 - Bob, Side Part/Black/Walk.png"
+  },
+  {
+    "file": "f-body-idle.png",
+    "path": "Characters/Body/Body 01 - Feminine, Thin/Honey/Idle.png"
+  },
+  {
+    "file": "f-pants-idle.png",
+    "path": "Characters/Clothing/Feminine, Thin/Legs/Pants 03 - Pants/Navy/Idle.png"
+  },
+  {
+    "file": "f-shoes-idle.png",
+    "path": "Characters/Clothing/Feminine, Thin/Feet/Shoes 01 - Shoes/Chocolate/Idle.png"
+  },
+  {
+    "file": "f-shirt-idle.png",
+    "path": "Characters/Clothing/Feminine, Thin/Torso/Shirt 07 - Buttoned Longsleeve Shirt/Fern/Idle.png"
+  },
+  {
+    "file": "f-head-idle.png",
+    "path": "Characters/Head/Head 01 - Feminine/Honey/Idle.png"
+  },
+  {
+    "file": "f-hair-idle.png",
+    "path": "Characters/Hair/Medium 07 - Bob, Side Part/Black/Idle.png"
+  },
+  {
+    "file": "f-body-sitting.png",
+    "path": "Characters/Body/Body 01 - Feminine, Thin/Honey/Sitting.png"
+  },
+  {
+    "file": "f-pants-sitting.png",
+    "path": "Characters/Clothing/Feminine, Thin/Legs/Pants 03 - Pants/Navy/Sitting.png"
+  },
+  {
+    "file": "f-shoes-sitting.png",
+    "path": "Characters/Clothing/Feminine, Thin/Feet/Shoes 01 - Shoes/Chocolate/Sitting.png"
+  },
+  {
+    "file": "f-shirt-sitting.png",
+    "path": "Characters/Clothing/Feminine, Thin/Torso/Shirt 07 - Buttoned Longsleeve Shirt/Fern/Sitting.png"
+  },
+  {
+    "file": "f-head-sitting.png",
+    "path": "Characters/Head/Head 01 - Feminine/Honey/Sitting.png"
+  },
+  {
+    "file": "f-hair-sitting.png",
+    "path": "Characters/Hair/Medium 07 - Bob, Side Part/Black/Sitting.png"
+  },
+  {
+    "file": "desk.png",
+    "path": "Objects/Furniture/Desk, Office.png"
+  },
+  {
+    "file": "shelf.png",
+    "path": "Objects/Furniture/Shelf.png"
+  },
+  {
+    "file": "counter.png",
+    "path": "Objects/Furniture/Countertop.png"
+  },
+  {
+    "file": "armchair.png",
+    "path": "Objects/Furniture/Seating/Chair, Sofa A.png"
+  },
+  {
+    "file": "sofa.png",
+    "path": "Objects/Furniture/Seating/Sofa, Casual A.png"
+  },
+  {
+    "file": "planter.png",
+    "path": "Objects/Furniture/Planter.png"
+  },
+  {
+    "file": "coffee.png",
+    "path": "Objects/Small Items/Coffee Maker.png"
+  },
+  {
+    "file": "laptop.png",
+    "path": "Objects/Small Items/Laptop.png"
+  },
+  {
+    "file": "dishes.png",
+    "path": "Objects/Small Items/Dishes A.png"
+  },
+  {
+    "file": "lamps.png",
+    "path": "Objects/Small Items/Lighting, Table.png"
+  },
+  {
+    "file": "clutter.png",
+    "path": "Objects/Small Items/Kitchen Clutter A.png"
+  },
+  {
+    "file": "paper.png",
+    "path": "Objects/Small Items/Loose Paper.png"
+  },
+  {
+    "file": "wood.png",
+    "path": "Structure/Floor/Wood Floor A.png"
+  },
+  {
+    "file": "window.png",
+    "path": "Structure/Windows/Ornamental Windows A.png"
+  }
+]

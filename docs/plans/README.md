@@ -44,3 +44,5 @@
 | [Bot 运行配置](2026-10-10-bot-runtime.md) | Agent 预设、每个 Bot 的模型和思考强度、工作文件夹、能力（MCP、技能、能力包） |
 | [长消息](2026-10-16-long-messages.md) | state.json 只存开头；超过 2 万字的 Bot 消息转成 DSH 文件；成员和界面怎么读全文 |
 | [Bot 之间派活](2026-10-16-bot-handoffs.md) | Bot 看得到对方的状态；没读的消息合成一条；派活树：下面的活交回后才往上交，不许发给在等结果的 Bot；不设总量和链长上限 |
+
+本分支的像素园区设计与素材规范集中在[Office campus](../office-campus.md)，当前验收见[verification](../verification.md)。

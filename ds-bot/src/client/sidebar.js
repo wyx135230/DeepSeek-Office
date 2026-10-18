@@ -11,7 +11,7 @@ import { Shimmer, workPhrase } from './cells.js'
 import { springEasing, SPRING_SHAPE } from './motion.js'
 import { hostText, t } from './i18n.js'
 import { showsDshRow } from './dsh-offer.js'
-import { OfficeEntry } from './office.js'
+import { OfficeEntry } from './office/index.js'
 
 // -------------------------------------------------------------------------
 // Sidebar

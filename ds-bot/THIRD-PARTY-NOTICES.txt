@@ -1,4 +1,4 @@
-DeepSeek Office 0.2.0 — bundled engine and game assets
+DeepSeek Office 0.3.0 — bundled engine and game assets
 
 Phaser and the following embedded components are distributed inside client.js.
 All assets are local; no runtime CDN is used.
@@ -134,19 +134,17 @@ Source: https://github.com/sparklinlabs/superpowers-asset-packs
 
 Pinned commit: `e8674a03ab4456802f71f848c4df79eccca23f7a`
 
-The unmodified PNG files come from `ninja-adventure/characters/` and
-`ninja-adventure/background-elements/tileset.png` at that commit. `font8x8.png`
-comes from `ninja-adventure/font8x8.png` at the same commit. Character
-files are renamed `character-<number>.png` and `character-dog.png`; no raster
-data was changed. The included README.md and LICENSE.txt are the upstream
-repository's original files.
+Only the unmodified character-dog.png from the pinned Ninja Adventure
+character collection is retained. Unused people, background tiles and fonts
+have been removed. See src/client/assets/ninja/SOURCES.md.
 
 License: CC0 1.0 Universal. The original repository explicitly permits use,
 modification and redistribution, including commercial games.
 
-The runtime selects four civilian archetypes plus a traveler and dog. Its
-AI outfit-color transformations are derived versions, also provided under CC0.
-Room composition, office furniture and interface code are original to this fork.
+The current runtime uses the dog as Momo. Previous Ninja civilian, tile and
+bitmap-font files remain in the source collection; the current room and human
+characters use the separately credited LPC Revised artwork below. Room
+composition and interface code are original to this fork.
 
 The newer Ninja Adventure pack by Pixel-Boy and AAA was also considered, but
 this build uses only the above pinned original GitHub files.
@@ -268,3 +266,36 @@ Affirmer's express Statement of Purpose.
 
 For more information, please see
 <http://creativecommons.org/publicdomain/zero/1.0/>
+
+==============================================================================
+
+LPC Revised — office, structure and character layer subset
+
+Source: https://github.com/ElizaWy/LPC
+Pinned commit: f07f7f5892e67c932c68f70bb04472f2c64e46bc
+Collection: https://opengameart.org/content/lpc-revised-the-office
+License: OGA-BY 3.0, as declared in the retained upstream Credits.txt.
+License text: src/client/assets/lpc/LICENSE.txt
+
+Artwork by Eliza Wyatt (DeathsDarling), Lanea Zimmerman (Sharm), Stephen
+Challener (Redshrike), Johannes Sjölund (Wulax), BlueCarrot16, BenCreating,
+Durrani, YuriNikolai, and Craftpix.net 2D Game Assets. The retained upstream
+src/client/assets/lpc/Credits.txt and credits/*.txt identify the artists,
+original source links, modifications and license for each asset family.
+See src/client/assets/lpc/SOURCES.md and sources.json for the exact file paths.
+
+Bundled original PNGs are unmodified. Runtime rendering composes the compatible
+64 x 64 character layers, applies shirt palette colors, and crops/scales object
+regions into the studio. The room composition, arcade cabinet overlays,
+Star catcher game, short reading texts and interface code are original to this
+fork. These original additions do not replace the LPC artists' attribution or
+the OGA-BY 3.0 terms for their artwork.
+
+
+Additional LPC character layers are retained under src/client/assets/lpc-cast/.
+Their OGA-BY 3.0 license, specific family credits, source paths and PNG hashes
+are recorded in that directory. All original raster bytes remain unmodified.
+
+Custom campus facility art was generated for this fork with OpenAI image
+generation. It is distributed under this project's Apache-2.0 terms; the
+method, cell order and integration rules are in src/client/assets/custom/SOURCES.md.

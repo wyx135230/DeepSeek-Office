@@ -34,8 +34,8 @@ import { ABOUT_CSS } from './about.js'
 import { MEMBER_CSS, MemberDock } from './member-status.js'
 import { USER_MESSAGE_CSS, UserMessageCell, canDrawUserMessages } from './user-message.js'
 import { noticeApprovals } from './approval-notices.js'
-import { OfficeOverlay } from './office.js'
-import { OFFICE_CSS } from './office-styles.js'
+import { OfficeOverlay } from './office/index.js'
+import { OFFICE_CSS } from './office/styles.js'
 
 export const inject = ['sessions', 'uiWorkspace', 'uiConversation', 'slots', 'theme', 'layout']
 

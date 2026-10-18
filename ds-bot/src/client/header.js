@@ -6,7 +6,7 @@ import { botState, BotAvatar, RoomAvatar } from './mark.js'
 import { ActivityIndicator } from './activity-row.js'
 import { clockLabel, openingTurn, unseenSince } from './cells.js'
 import { t } from './i18n.js'
-import { BuildingIcon } from './office.js'
+import { BuildingIcon } from './office/index.js'
 
 // -------------------------------------------------------------------------
 // Conversation header
