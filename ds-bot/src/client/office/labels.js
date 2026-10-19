@@ -7,7 +7,7 @@ function labelManager(scene) {
   const root = document.createElement('div')
   root.className = 'of-world-labels'
   root.setAttribute('aria-hidden', 'true')
-  Object.assign(root.style, { position: 'absolute', inset: '0', pointerEvents: 'none', overflow: 'hidden' })
+  Object.assign(root.style, { position: 'absolute', inset: '0', pointerEvents: 'none', overflow: 'hidden', zIndex: '2' })
   parent.appendChild(root)
   const labels = new Set()
   let disposed = false
@@ -27,9 +27,11 @@ function labelManager(scene) {
     const zoomY = camera.zoomY ?? camera.zoom ?? 1
     const center = camera.midPoint ?? { x: camera.scrollX + camera.width / 2, y: camera.scrollY + camera.height / 2 }
     for (const label of labels) {
-      const x = camera.x + camera.width / 2 + (label.x - center.x) * zoomX
-      const y = camera.y + camera.height / 2 + (label.y - center.y) * zoomY
-      const onCamera = x >= camera.x - 20 && x <= camera.x + camera.width + 20 && y >= camera.y - 40 && y <= camera.y + camera.height + 40
+      const height = label.element.classList.contains('of-world-speech') ? 60 : 53
+      const point = scene.view3d?.project(label.x, label.y + (height === 60 ? 42 : 36), height)
+      const x = point?.x ?? camera.x + camera.width / 2 + (label.x - center.x) * zoomX
+      const y = point?.y ?? camera.y + camera.height / 2 + (label.y - center.y) * zoomY
+      const onCamera = point ? point.visible : x >= camera.x - 20 && x <= camera.x + camera.width + 20 && y >= camera.y - 40 && y <= camera.y + camera.height + 40
       label.element.style.display = label.visible && label.text && camera.visible !== false && onCamera ? 'block' : 'none'
       label.element.style.left = `${Math.round(metrics.left + x * metrics.scaleX)}px`
       label.element.style.top = `${Math.round(metrics.top + y * metrics.scaleY)}px`
@@ -64,12 +66,7 @@ export function gameLabel(scene, value, { bubble = false } = {}) {
   const manager = labelManager(scene)
   const element = document.createElement('span')
   element.className = bubble ? 'of-world-label of-world-speech' : 'of-world-label of-world-name'
-  Object.assign(element.style, { position: 'absolute', width: 'max-content', maxWidth: bubble ? '220px' : '160px',
-    padding: bubble ? '7px 10px' : '3px 7px', border: '1px solid #b9c0ad', borderRadius: bubble ? '7px 7px 7px 2px' : '5px',
-    background: bubble ? '#fffdf4' : '#f7f5e9f2', color: '#344438', boxShadow: '0 2px 5px #26352820',
-    font: '12px/1.45 "Segoe UI", system-ui, sans-serif', fontWeight: bubble ? '400' : '600', letterSpacing: 'normal',
-    textTransform: 'none', whiteSpace: bubble ? 'normal' : 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-    overflowWrap: 'anywhere', pointerEvents: 'none', transform: 'translate(-50%, 0)' })
+  Object.assign(element.style, { position: 'absolute', width: 'max-content', maxWidth: bubble ? '220px' : '160px', transform: 'translate(-50%, 0)' })
   manager.root.appendChild(element)
   let text = String(value ?? ''), visible = true, x = 0, y = 0, originX = 0.5, originY = 0, depth = 0, destroyed = false
   element.textContent = text
@@ -85,7 +82,7 @@ export function gameLabel(scene, value, { bubble = false } = {}) {
     setOrigin(nextX, nextY = nextX) { originX = nextX; originY = nextY; element.style.transform = `translate(${-originX * 100}%, ${-originY * 100}%)`; return label },
     setVisible(value) { visible = Boolean(value); if (!visible) element.style.display = 'none'; return label },
     setDepth(value) { depth = value; element.style.zIndex = String(Math.round(value)); return label },
-    setBackgroundColor(color) { element.style.backgroundColor = color; return label },
+    setBackgroundColor() { return label },
     getBounds() {
       const zoom = scene.cameras.main.zoom || 1
       const scale = manager.metrics

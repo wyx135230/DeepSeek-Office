@@ -27,7 +27,7 @@ export async function bundleClient() {
     platform: 'browser',
     target: 'es2022',
     external: PLATFORM_MODULES,
-    loader: { '.png': 'dataurl' },
+    loader: { '.png': 'dataurl', '.glb': 'dataurl' },
     // The engine is local and lazy; compact its distribution for plugin startup.
     treeShaking: true,
     minify: true,

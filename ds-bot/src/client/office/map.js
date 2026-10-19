@@ -1,6 +1,6 @@
 import { createElement as h, useEffect, useRef, useState } from 'react'
 
-const ROOM_COLORS = { work: '#dce5ce', office: '#dce5ce', cafe: '#eadbc2', library: '#dce1cc', arcade: '#d3dce6', restaurant: '#e9d8be', bar: '#ddd4e5', gym: '#cddfd9', corridor: '#eee8d7', reception: '#e8dfc9' }
+const ROOM_COLORS = { work: '#b7cbd0', office: '#b7cbd0', cafe: '#d5c5ab', library: '#c1cdb5', arcade: '#b7c3d0', restaurant: '#d5ccb8', bar: '#c8bdcc', gym: '#b7cfc5', corridor: '#dce2d8', reception: '#d4dcd1' }
 const rectangle = value => ({ x: value.x ?? 0, y: value.y ?? 0, width: value.width ?? 8, height: value.height ?? 8 })
 
 export function OfficeMap({ sceneApi, onRoomChange }) {
@@ -50,11 +50,11 @@ export function OfficeMap({ sceneApi, onRoomChange }) {
         if (event.key === 'Home') { event.preventDefault(); follow() }
         else if (moves[event.key] && view) { event.preventDefault(); event.stopPropagation(); const [dx, dy] = moves[event.key]; pan((view.left + view.right) / 2 + dx, (view.top + view.bottom) / 2 + dy) }
       } },
-      h('rect', { width: world.width, height: world.height, fill: '#f0ead8' }),
-      rooms.map((room, index) => h('rect', { key: room.id ?? index, ...rectangle(room), fill: ROOM_COLORS[room.kind ?? room.type] ?? '#e4dfcb', stroke: '#a6ac96', strokeWidth: 3 })),
-      (world.furniture ?? []).map((item, index) => h('rect', { key: `fixture-${index}`, ...rectangle(item), fill: '#b6baa2', opacity: 0.6 })),
-      (world.walls ?? []).map((wall, index) => h('rect', { key: `wall-${index}`, ...rectangle(wall), fill: '#747d6a' })),
-      (world.doors ?? []).map((door, index) => h('rect', { key: `door-${index}`, ...rectangle(door), fill: door.open ? '#b9c89f' : '#a67d53', stroke: '#f7f5e9', strokeWidth: 2 })),
+      h('rect', { width: world.width, height: world.height, fill: '#e5eae0' }),
+      rooms.map((room, index) => h('rect', { key: room.id ?? index, ...rectangle(room), fill: ROOM_COLORS[room.kind ?? room.type] ?? '#e2d6b8', stroke: '#a58a60', strokeWidth: 3 })),
+      (world.furniture ?? []).map((item, index) => h('rect', { key: `fixture-${index}`, ...rectangle(item), fill: '#a8906b', opacity: 0.65 })),
+      (world.walls ?? []).map((wall, index) => h('rect', { key: `wall-${index}`, ...rectangle(wall), fill: '#9aaca6' })),
+      (world.doors ?? []).map((door, index) => h('rect', { key: `door-${index}`, ...rectangle(door), fill: door.open ? '#9ab183' : '#8a6440', stroke: '#f7efd9', strokeWidth: 2 })),
       view ? h('rect', { x: Math.max(0, view.left), y: Math.max(0, view.top), width: Math.max(0, Math.min(world.width, view.right) - Math.max(0, view.left)), height: Math.max(0, Math.min(world.height, view.bottom) - Math.max(0, view.top)), fill: '#ffffff14', stroke: '#486f8d', strokeWidth: Math.max(4, world.width / 130), strokeDasharray: '12 6' }) : null,
       (snapshot.actors ?? []).map(actor => h('circle', { key: actor.id, cx: actor.x, cy: actor.y, r: Math.max(7, world.width / 75), fill: actor.state === 'waiting' ? '#ad683e' : '#6d8667', stroke: '#f7f5e9', strokeWidth: 3 })),
       snapshot.player ? h('circle', { cx: snapshot.player.x, cy: snapshot.player.y, r: Math.max(9, world.width / 65), fill: '#386b91', stroke: '#fffdf4', strokeWidth: 4 }) : null)
@@ -64,5 +64,7 @@ export function OfficeMap({ sceneApi, onRoomChange }) {
     h('nav', { className: 'of-map-rooms', 'aria-label': 'Rooms on this floor' }, rooms.filter(room => !['corridor', 'hallway'].includes(room.kind ?? room.type)).map((room, index) => h('button', {
       key: room.id ?? index, type: 'button', className: 'of-map-room', 'aria-current': room.name === roomName.current ? 'location' : undefined,
       onClick: () => pan(room.x + room.width / 2, room.y + room.height / 2),
-    }, h('span', { style: { background: ROOM_COLORS[room.kind ?? room.type] ?? '#d6dcc9' }, 'aria-hidden': true }), room.name ?? `Room ${index + 1}`))))
+    }, h('span', { style: { background: ROOM_COLORS[room.kind ?? room.type] ?? '#d6dcc9' }, 'aria-hidden': true }), room.name ?? `Room ${index + 1}`)),
+    world?.elevator ? h('button', { type: 'button', className: 'of-map-room', onClick: () => pan(world.elevator.center.x, world.elevator.center.y) },
+      h('span', { style: { background: '#397e78' }, 'aria-hidden': true }), 'Lift') : null))
 }

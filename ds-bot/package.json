@@ -1,7 +1,7 @@
 {
   "name": "deepseek-office",
-  "version": "0.4.0",
-  "description": "DeepSeek Office: persistent AI teammates in a cozy, interactive pixel office for DeepSeek Harness",
+  "version": "0.6.1",
+  "description": "DeepSeek Office: persistent AI teammates in a detailed, interactive 2.5D office for DeepSeek Harness",
   "keywords": [
     "dsh-plugin",
     "deepseek-harness",
@@ -42,9 +42,11 @@
     "src/client/assets/ninja/LICENSE.txt",
     "src/client/assets/ninja/SOURCES.md",
     "src/client/assets/lpc/",
-    "LICENSE",
     "src/client/assets/lpc-cast/",
-    "src/client/assets/custom/"
+    "src/client/assets/office-worker/SOURCES.md",
+    "src/client/assets/elevator/SOURCES.md",
+    "src/client/assets/cinema/SOURCES.md",
+    "LICENSE"
   ],
   "scripts": {
     "build": "node scripts/build-client.mjs",
@@ -71,6 +73,7 @@
     "esbuild": "0.28.2"
   },
   "dependencies": {
-    "phaser": "4.2.1"
+    "phaser": "4.2.1",
+    "three": "0.186.1"
   }
 }

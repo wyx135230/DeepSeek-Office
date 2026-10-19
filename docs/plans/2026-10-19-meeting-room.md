@@ -1,0 +1,9 @@
+# Meeting room and seating
+
+Each group floor reserves one facility for a meeting room. Reception keeps its existing leisure facilities. Two other group facilities remain seeded. A long oak table has one visitor head seat and eight evenly spaced member seats, with orderly perimeter positions for overflow. Seats have explicit approach, pose and facing coordinates; paths use the existing collision map. Remove decorative automatic table chairs and unneeded work lounge chairs; keep sofas and register their individual seats for resting.
+
+Entering the room prompts once per entry. Confirmation starts a visual meeting, routes the visitor to the head seat and releases employees in roster order. A meeting overrides only visual routing; real Bot work, messages and permissions remain unchanged. Ending, leaving the floor or removing members releases meeting ownership. The room display board opens a centered group conversation; the meeting conversation occupies the lower pane. Only one conversation occurrence mounts at a time.
+
+Use documented Session references, SessionProvider and the conversation.content Component Factory to reuse the existing Chat view and composer, including history paging, markdown, attachments, replies, tools and live updates. The main conversation body is absent while the office owns the composer, avoiding simultaneous editable roots for a Session. Do not patch Harness or import private implementation modules. Short overhead captions are presentation copies of rendered group messages, never independent chat requests.
+
+Validation: navigation across floor seeds and sizes, seat uniqueness and furniture correspondence, overflow and deterministic assignments, staggered arrival/end behavior, sofa resting/reservations, original group history and send path, live captions, centered display and compact layouts. Use only the isolated mock bench.

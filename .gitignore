@@ -1,12 +1,42 @@
 node_modules/
 *.tgz
 
+# Local environment files; keep documented examples and templates.
+.env
+.env.*
+!.env.example
+!.env.*.example
+!.env.template
+!.env.*.template
+
+# Logs, caches and local tool output.
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.cache/
+.pytest_cache/
+__pycache__/
+*.pyc
+*.pyo
+/coverage/
+/outputs/
+
+# Blender backup files; keep source models and exported game assets.
+*.blend[0-9]*
+
+# Operating-system metadata.
+.DS_Store
+Thumbs.db
+Desktop.ini
+
 # A DeepSeek Harness checkout for the tests and the test bench.
 /deepseek-harness/
 
 # Test bench, local DSH data and the screenshots of dev/check.sh.
 .dsh-test*/
 .dsh-home/
+.dsh/
 /shots/
 .playwright-mcp/
 /.office-*.log
@@ -18,6 +48,4 @@ node_modules/
 # Local Docker deployment data.
 /docker/data/
 /docker/workspace/
-/docker/.env
-/.env
 /docker-compose.override.yml

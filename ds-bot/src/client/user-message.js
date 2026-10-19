@@ -1,4 +1,4 @@
-import { createElement as h, Fragment, useState } from 'react'
+import { createElement as h, Fragment, useState, useEffect } from 'react'
 import * as ui from '@deepseek-ai/dsh-client-ui-primitives'
 import { mentionSpans } from '../shared/mentions.js'
 import { BotMark } from './mark.js'
@@ -85,6 +85,7 @@ export function UserMessageCell({ node, sessionId, useRoster, actions, renderMes
   const roster = useRoster(value => value)
   const data = node.data ?? {}
   const { text, attachments, rest } = contentParts(data.content)
+  useEffect(() => { actions.noteOfficeSpeech?.(sessionId, 'studio-visitor', `user:${data.seq ?? node.key}`, text, data.time) }, [sessionId, data.seq, node.key, text])
   const referenceLabels = data.referenceLabels ?? []
   const references = openFile && openSkill ? { openFile, openSkill } : undefined
   const steering = node.kind === 'steering'

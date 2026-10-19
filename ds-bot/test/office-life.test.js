@@ -87,7 +87,7 @@ test('removed agents and stuck routes release station claims', () => {
 test('long cross-campus walks retain their reservation until a realistic arrival deadline', () => {
   const campus = createOfficeWorld(12, false, 'floor-0')
   const start = campus.desks.find(desk => desk.id === 'work-3-desk-1').home
-  const destination = campus.stations.find(spot => spot.id === 'work-1-chat-2')
+  const destination = campus.stations.find(spot => spot.id === 'work-1-sofa-rest-1')
   const life = createOfficeLife({ ...campus, stations: [destination] })
   const coworker = agent('long-route', start.x, start.y)
   assert.equal(startTrip(life, [coworker])[coworker.id].stationId, destination.id)

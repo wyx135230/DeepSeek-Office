@@ -35,6 +35,8 @@ import { MEMBER_CSS, MemberDock } from './member-status.js'
 import { USER_MESSAGE_CSS, UserMessageCell, canDrawUserMessages } from './user-message.js'
 import { noticeApprovals } from './approval-notices.js'
 import { OfficeOverlay } from './office/index.js'
+import { OfficeConversation } from './office/conversation.js'
+import { createMeetingSpeech } from '../shared/office/meeting.js'
 import { OFFICE_CSS } from './office/styles.js'
 
 export const inject = ['sessions', 'uiWorkspace', 'uiConversation', 'slots', 'theme', 'layout']
@@ -341,7 +343,11 @@ export function apply(ctx) {
     for (const [id, owner] of pendingAdopt) if (owner === agentId && !ids.includes(id)) ids.push(id)
     return ids
   }
+  const officeSpeech = createMeetingSpeech()
   const actions = {
+    retainOfficeChat: id => ctx.sessions.retain(id, { source: 'controllerOperation' }),
+    watchOfficeSpeech: officeSpeech.watch,
+    noteOfficeSpeech: officeSpeech.note,
     // The full-pane overlays sit above the conversation, so opening one must dismiss them
     // or the click appears to do nothing.
     isAgentSession: id => isAgentSessionId(id),
@@ -794,7 +800,18 @@ export function apply(ctx) {
     // Desktop's "··· More"), which comes back in Agent mode.
     () => shadow('settings.launcher', { priority: BOT_PRIORITY, inject: face }, AccountLauncher),
     () => shadow('shell.overlay', { id: 'bot', order: 50, inject: face }, Overlays),
-    () => shadow('shell.overlay', { id: 'pixel-office', order: 49, inject: face }, OfficeOverlay),
+    () => {
+      let release = null
+      const sync = () => {
+        if (ui.getSnapshot().office && !release) release = shadow('main.conversation', { priority: BOT_PRIORITY }, Nothing)
+        else if (!ui.getSnapshot().office && release) { release(); release = null }
+      }
+      const off = ui.subscribe(sync)
+      sync()
+      return () => { off(); release?.() }
+    },
+    () => shadow('shell.overlay', { id: 'pixel-office', order: 49, inject: face, children: { 'ds-bot.office.conversation': { kind: 'single', scope: 'session' } } }, OfficeOverlay),
+    () => shadow('ds-bot.office.conversation', { inject: face }, OfficeConversation),
     () => shadow('shell.overlay', { id: 'bot-signin', order: 55, inject: face }, DeepSeekSignIn),
     () => shadow('shell.overlay', { id: 'bot-toast', order: 60, inject: face }, ErrorToast),
   ]

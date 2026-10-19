@@ -126,7 +126,18 @@ function decide(body) {
   const officePrompt = textOf(last?.content)
   if (officePrompt.startsWith('Design an original, adorable Japanese slice-of-life pixel-game coworker.')) {
     const person = /Person: (\{[^\n]+?\})\. User direction:/.exec(officePrompt)?.[1]
-    return [text(JSON.stringify(defaultPixelAvatar(person ? JSON.parse(person) : { id: 'office-mock', name: 'Coworker' })))]
+    const avatar = defaultPixelAvatar(person ? JSON.parse(person) : { id: 'office-mock', name: 'Coworker' })
+    const direction = /User direction: ("[^\n]+?")\./.exec(officePrompt)?.[1] ?? ''
+    if (/feminine|female/i.test(direction)) avatar.gameAppearance.body = 'f'
+    if (/masculine|male coworker/i.test(direction)) avatar.gameAppearance.body = 'm'
+    if (/coffee skin/i.test(direction)) avatar.gameAppearance.skin = 'coffee'
+    if (/short curls|curly/i.test(direction)) avatar.gameAppearance.hair = 'short-curls'
+    if (/cowlick/i.test(direction)) avatar.gameAppearance.hair = 'cowlick'
+    if (/golden|blond/i.test(direction)) avatar.gameAppearance.hairColor = '#d2b86c'
+    if (/polo/i.test(direction)) avatar.gameAppearance.outfit = 'polo'
+    if (/sage/i.test(direction)) avatar.gameAppearance.shirtColor = '#62947a'
+    avatar.gameAppearance.accessories = ['glasses', 'name-badge', 'hair-clip', 'scarf'].filter(item => new RegExp(item.replace('-', '[ -]'), 'i').test(direction))
+    return [text(JSON.stringify(avatar))]
   }
   if (officePrompt.startsWith('Design a harmonious color palette for an original cozy Japanese pixel office.')) {
     return [text(JSON.stringify({ name: 'Rainy reading room', wall: '#d4e0d8', floor: '#b6a083', accent: '#839c99', night: true }))]

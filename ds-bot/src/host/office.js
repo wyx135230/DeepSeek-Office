@@ -1,6 +1,7 @@
 import { BlockAssembler } from '@deepseek-ai/dsh-llm'
 import { cleanOfficeTheme, cleanPixelAvatar, defaultPixelAvatar } from '../shared/office.js'
 import { splitRef } from './text.js'
+import { GAME_APPEARANCE_OPTIONS } from '../shared/office/appearance.js'
 
 const refused = message => Object.assign(new Error(message), { code: 'bot/refused' })
 const invalid = message => Object.assign(new Error(message), { code: 'bot/invalid' })
@@ -93,11 +94,14 @@ export function install(rt) {
       const { value, model } = await modelJson(bot, rt.chatOf(bot.id), [
         'Design an original, adorable Japanese slice-of-life pixel-game coworker. Return ONLY a JSON object, no code.',
         'Schema: {"name":"short character name","palette":["#00000000",3 to 15 opaque #rrggbb colors],"pixels":[24 strings of exactly 16 hexadecimal palette indexes each]}.',
+        'Also include gameAppearance: {body,skin,hair,outfit,hairColor,shirtColor,pantsColor,shoesColor,accessories}. This designs the actual full-body animated character, not just the portrait.',
+        `Allowed gameAppearance traits: ${JSON.stringify(GAME_APPEARANCE_OPTIONS)}. Choose one value for body, skin, hair and outfit. accessories is an array of zero to four allowed values. Colors are opaque #rrggbb. Match the user direction and portrait. Authored body proportions and animation registration must remain unchanged.`,
         '0 is transparent. Other pixels index palette by 0–9,A–F. Keep the body inside the grid. Use a clear chibi silhouette, big head, expressive eyes, tiny feet. Face the viewer. Give this person distinctive hair, clothing and an accessory matching their role. No background. Do not reproduce an existing copyrighted character.',
         `Person: ${JSON.stringify({ name: bot.name, role: bot.role })}. User direction: ${JSON.stringify(prompt || 'gentle, cozy, individual personality')}.`,
         `This valid original base shows the exact grid format; redesign the pixels and palette creatively: ${JSON.stringify(template)}`,
       ].join('\n'), jobSignal)
       const clean = cleanPixelAvatar(value)
+      if (!clean.gameAppearance) throw invalid('The model omitted the playable character appearance. Try again.')
       await rt.load()
       jobSignal.throwIfAborted()
       writable()

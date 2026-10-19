@@ -203,7 +203,8 @@ function EventLine({ prefix, bots, joiner = t('and'), onOpen, whole = false }) {
 }
 
 // One Bot message inside a group chat: avatar, name (with its group role), bubble.
-function GroupMessage({ bot, text, texts = [text], room, roster, actions, msgKey, useUi, whole }) {
+function GroupMessage({ bot, text, texts = [text], room, roster, actions, msgKey, useUi, whole, time }) {
+  useEffect(() => { if (time !== undefined) actions.noteOfficeSpeech?.(room?.id, bot.id, msgKey, texts.join('\n'), time) }, [room?.id, bot.id, msgKey, texts.join('\n'), time])
   const lead = h('button', { type: 'button', className: 'bt-lead', 'aria-label': t("Open {name}'s chat", { name: bot.name }), onClick: () => actions.openSession(bot.id) },
     h(BotMark, { bot, size: 22 }))
   return h('div', { className: 'bt-group-msg' },
@@ -400,7 +401,7 @@ export function TriggerCell({ node, sessionId, useRoster, useSessions, useTurnCl
         const text = stripHeader(contentText(data.content))
         // A trigger's data carries no turn; its event seq is the one durable name of this post.
         return h(GroupMessage, {
-          bot: poster, text: file ? stripLongNote(text) : text, room, roster, actions, msgKey: `${sessionId}:post:${data.seq ?? node.key}`, useUi,
+          bot: poster, text: file ? stripLongNote(text) : text, room, roster, actions, msgKey: `${sessionId}:post:${data.seq ?? node.key}`, useUi, time: data.time,
           whole: file ? { length: source.length, load: () => actions.fileText(file) } : undefined,
         })
       }
@@ -607,6 +608,7 @@ function useLiveNote(actions, sessionId, id, entry) {
 
 function GroupReplies({ sessionId, callId, done, content, roster, actions, useUi, useWork }) {
   const [live, setLive] = useState({ replies: [], speaking: null })
+  const captions = useRef(new Map())
   useEffect(() => {
     if (done) return undefined
     let stop = false
@@ -627,6 +629,16 @@ function GroupReplies({ sessionId, callId, done, content, roster, actions, useUi
   if (done) {
     try { replies = JSON.parse(contentText(content)).replies ?? [] } catch { replies = [] }
   }
+  const captionKey = JSON.stringify(replies.map(r => [r.kind, r.botId, r.text]))
+  useEffect(() => {
+    replies.forEach((reply, i) => {
+      if (reply.kind !== undefined && reply.kind !== 'user') return
+      const key = `${callId}:${i}`
+      if (captions.current.get(key) === reply.text) return
+      captions.current.set(key, reply.text)
+      actions.noteOfficeSpeech?.(sessionId, reply.kind === 'user' ? 'studio-visitor' : reply.botId, key, reply.text, reply.time)
+    })
+  }, [sessionId, callId, captionKey])
   // Members speak one at a time, so only the current speaker is typing.
   const pending = done || !live.speaking ? [] : [live.speaking]
   const speakerTool = useWork?.(work => work.bots?.[live.speaking]?.tool) ?? undefined

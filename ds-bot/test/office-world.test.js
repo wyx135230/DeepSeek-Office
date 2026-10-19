@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { createOfficeWorld, canStand, findPath, clearSegment, nearInteraction, facing } from '../src/shared/office/world.js'
+import { createOfficeWorld, canStand, findPath, clearSegment, nearInteraction, facing, OFFICE_GEOMETRY } from '../src/shared/office/world.js'
 
 const facilities = world => world.rooms.filter(room => room.kind !== 'work')
 const verifyRoute = (world, start, target) => {
@@ -17,7 +17,7 @@ test('all team sizes and lobbies connect every desk, activity and doorway', () =
     const world = createOfficeWorld(count, lobby, seed)
     assert.equal(world.desks.length, lobby ? 0 : count)
     assert.ok(canStand(world.spawn, world))
-    assert.equal(facilities(world).length, 3)
+    assert.equal(facilities(world).length, 4)
     for (const target of [...world.props, ...world.stations, ...world.desks.map(desk => desk.home)]) verifyRoute(world, world.spawn, target)
     for (const room of world.rooms) {
       const door = world.doors.find(door => door.id === room.doorId)
@@ -63,12 +63,12 @@ test('floor seeds vary room slots and cover all six orderly facility templates',
     signatures.add(JSON.stringify(world.rooms.map(({ kind, x, y }) => ({ kind, x, y }))))
     for (const list of [world.furniture, world.stations, world.props, world.rooms, world.doors]) assert.equal(new Set(list.map(item => item.id)).size, list.length)
     for (const fixture of world.furniture) {
-      assert.equal(fixture.x % 16, 0)
-      assert.equal(fixture.y % 16, 0)
+      assert.equal(fixture.x % 8, 0)
+      assert.equal(fixture.y % 8, 0)
       assert.ok(world.rooms.some(room => room.id === fixture.roomId))
     }
   }
-  assert.deepEqual([...kinds].sort(), ['arcade', 'bar', 'cafe', 'gym', 'library', 'restaurant'])
+  assert.deepEqual([...kinds].sort(), ['arcade', 'bar', 'cafe', 'cinema', 'conference', 'gym', 'library', 'restaurant'])
   assert.ok(signatures.size >= 12)
 })
 
@@ -87,18 +87,22 @@ test('walls block feet and interactions while doorways are real passable portals
 
 test('empty room slots cannot be crossed or used as destinations', () => {
   const world = createOfficeWorld(0, false, 'empty-slots')
-  const empty = [{ x: 32, y: 32 }, { x: 432, y: 32 }, { x: 832, y: 32 }, { x: 32, y: 432 }, { x: 432, y: 432 }, { x: 832, y: 432 }].find(slot => !world.rooms.some(room => room.x === slot.x && room.y === slot.y))
-  const target = { x: empty.x + 192, y: empty.y + 160 }
+  const geo = OFFICE_GEOMETRY
+  const slots = [geo.rowTop, geo.rowBottom].flatMap(y => [0, 1, 2].map(column => ({ x: 32 + column * geo.strideX, y })))
+  const empty = slots.find(slot => !world.rooms.some(room => room.x === slot.x && room.y === slot.y))
+  const target = { x: empty.x + 160, y: empty.y + 128 }
   assert.equal(canStand(target, world), false)
   assert.deepEqual(findPath(world.spawn, target, world), [])
-  const edge = { x: empty.x + 192, y: empty.y < 352 ? 344 : 440 }
+  const edge = { x: empty.x + 160, y: empty.y === geo.rowTop ? geo.rowTop + geo.roomHeight - geo.wall + 8 : empty.y + 8 }
   assert.ok(world.walls.some(wall => edge.x > wall.x && edge.x < wall.x + wall.width && edge.y > wall.y && edge.y < wall.y + wall.height), 'empty slots have physical corridor barriers')
-  for (const x of [424, 824]) for (const y of [344, 440]) assert.ok(world.walls.some(wall => x > wall.x && x < wall.x + wall.width && y > wall.y && y < wall.y + wall.height), 'room gaps have physical corridor barriers')
+  for (const x of [32 + geo.roomWidth + 8, 32 + geo.strideX + geo.roomWidth + 8]) for (const y of [geo.rowTop + geo.roomHeight - geo.wall + 8, geo.rowBottom + 8]) {
+    assert.ok(world.walls.some(wall => x > wall.x && x < wall.x + wall.width && y > wall.y && y < wall.y + wall.height), 'room gaps have physical corridor barriers')
+  }
 })
 
 test('navigation uses direct clear paths and starts next to collision boundaries', () => {
   const world = createOfficeWorld(12, false, 'routes')
-  const target = { x: world.spawn.x + 64, y: world.spawn.y }
+  const target = { x: world.spawn.x + 16, y: world.spawn.y }
   assert.deepEqual(findPath(world.spawn, target, world), [target])
   for (const room of world.rooms) {
     const door = world.doors.find(door => door.id === room.doorId)

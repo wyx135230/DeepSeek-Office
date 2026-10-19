@@ -1,4 +1,6 @@
 export const DEFAULT_OFFICE_THEME = Object.freeze({ name: 'Komorebi studio', wall: '#efe4d0', floor: '#c99e72', accent: '#779d83', night: false })
+import { cleanGameAppearance, seededGameAppearance } from './office/appearance.js'
+
 export const PIXEL_WIDTH = 16
 export const PIXEL_HEIGHT = 24
 
@@ -30,7 +32,8 @@ export function cleanPixelAvatar(value) {
   if (!Array.isArray(palette) || palette.length < 4 || palette.length > 16 || palette[0] !== '#00000000' || palette.slice(1).some(entry => !color(entry))) throw invalid('Pixel characters need a transparent first color and 3–15 #rrggbb colors')
   if (!Array.isArray(pixels) || pixels.length !== PIXEL_HEIGHT || pixels.some(row => typeof row !== 'string' || row.length !== PIXEL_WIDTH || !/^[0-9a-f]+$/i.test(row) || [...row].some(pixel => parseInt(pixel, 16) >= palette.length))) throw invalid('Pixel characters need a 16 × 24 grid with valid palette indexes')
   if (pixels.join('').replace(/0/g, '').length < 30) throw invalid('The pixel character is empty')
-  return { version: 1, name: String(value.name ?? 'Coworker').slice(0, 60), palette: [...palette], pixels: pixels.map(row => row.toUpperCase()) }
+  const gameAppearance = value.gameAppearance === undefined ? undefined : cleanGameAppearance(value.gameAppearance)
+  return { version: gameAppearance ? 2 : 1, name: String(value.name ?? 'Coworker').slice(0, 60), palette: [...palette], pixels: pixels.map(row => row.toUpperCase()), ...(gameAppearance ? { gameAppearance } : {}) }
 }
 
 export function hashOf(value) {
@@ -55,7 +58,7 @@ export function defaultPixelAvatar(bot = {}) {
   fill(7, 13, 2, 2, '5'); fill(3, 14, 2, 5, '4'); fill(11, 14, 2, 5, '4')
   fill(3, 18, 2, 2, '2'); fill(11, 18, 2, 2, '2')
   fill(5, 19, 3, 3, '7'); fill(9, 19, 2, 3, '7'); fill(4, 22, 4, 1, '1'); fill(9, 22, 3, 1, '1')
-  return cleanPixelAvatar({ name: bot.name ?? 'Coworker', palette: ['#00000000', '#363b46', skins[seed % skins.length], hairs[(seed >>> 4) % hairs.length], shirts[(seed >>> 8) % shirts.length], '#f5e9cd', '#be826e', '#535d70'], pixels: grid.map(row => row.join('')) })
+  return cleanPixelAvatar({ name: bot.name ?? 'Coworker', palette: ['#00000000', '#363b46', skins[seed % skins.length], hairs[(seed >>> 4) % hairs.length], shirts[(seed >>> 8) % shirts.length], '#f5e9cd', '#be826e', '#535d70'], pixels: grid.map(row => row.join('')), gameAppearance: { ...seededGameAppearance(hashOf(String(bot.id ?? 'studio-visitor'))), hairColor: hairs[(seed >>> 4) % hairs.length], shirtColor: shirts[(seed >>> 8) % shirts.length], accessories: [] } })
 }
 
 export function officeLayout(count) {

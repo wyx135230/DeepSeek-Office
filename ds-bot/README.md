@@ -2,9 +2,37 @@
 
 The DeepSeek Office plugin, based on DS Bot, for [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) (dsh). It turns dsh into a team of long-lived Bots that talk to you, to each other and in group chats. See the [project page](../README.md) for an overview, install steps and screenshots.
 
-> Early release (v0.1). Features, tools and the saved data format can still change.
+> Version 0.6.1 adds a screening room on every floor, with the supplied curved TV and six three-person sofas, preserving the existing rooms and native group conversations. The screen currently shows a static cinema illustration. Features, tools and the saved data format can still change.
 
-Tested with dsh `0.2.0-rc.2` (Web and Desktop) on Linux.
+The office uses a bundled Three.js orthographic view over the existing Phaser
+simulation. Camera rotation, zoom, overview, screen-relative movement and the
+responsive game HUD do not change the Harness Bot or conversation contracts.
+Architecture is original and procedural; the worker is derived from the owner's
+supplied generated GLB. All resources are bundled locally. The wardrobe combines
+skin, hair, shirt, trouser and shoe colors and saves each identity in browser
+storage. A background AI portrait does not overwrite these choices; an explicit
+user direction can. Body shape and clothing geometry currently share one model.
+See the [character checks](../docs/office-character-verification.md) and the
+[design](../docs/plans/2026-10-19-isometric-office.md) and
+[verification](../docs/office-25d-verification.md).
+
+The owner's elevator GLB supplies a walk-in cabin on the right of every corridor.
+The map's Lift button inspects it; clicking or walking inside opens the adjacent
+destination panel. Travel closes doors, fades the old scene, waits for the new
+renderer, reveals the destination and walks out. IDs identify floors throughout;
+duplicate trips are locked, unavailable destinations recover safely and closing
+the office cancels pending work. See [elevator checks](../docs/office-elevator-verification.md).
+
+Every group floor reserves a meeting room. Confirm entry to sit at the head of
+the table; coworkers queue, enter in roster order, then take up to eight seats
+or orderly perimeter positions. The lower meeting pane and centered wall display
+borrow the same group Session and native conversation/composer. History, live
+replies, attachments and full messages stay in the original chat. Recent messages
+also show truncated overhead captions. Ending a meeting restores daily routines;
+sofas and workstation chairs support seated breaks. See [meeting checks](../docs/office-meeting-verification.md).
+
+The development harness is pinned to dsh `0.2.0-rc.2`. Current office browser
+checks use an isolated Web profile on Windows; see the linked verification records.
 
 ## Features
 
@@ -33,19 +61,19 @@ Tested with dsh `0.2.0-rc.2` (Web and Desktop) on Linux.
 
 ## Install
 
-Install the local `deepseek-office-0.4.0.tgz` build using DSH's Plugins page or `dsh plugin --profile web add /absolute/path/deepseek-office-0.4.0.tgz`. Disable the original `ds-bot` / legacy `dsh-bot` plugin in that profile first; both variants share the internal Bot identity. Keep your data. See the [project install guide](../README.md#install-the-local-build).
+Install the local `deepseek-office-0.6.1.tgz` build using DSH's Plugins page or `dsh plugin --profile web add /absolute/path/deepseek-office-0.6.1.tgz`. Disable the original `ds-bot` / legacy `dsh-bot` plugin in that profile first; both variants share the internal Bot identity. Keep your data. See the [project install guide](../README.md#quick-start). Installing by the `deepseek-office` package name requires that an owner has published it to the selected npm registry.
 
-## Pixel offices
+## 2.5D offices
 
 Each group becomes one office floor. The lobby lists the team's offices; members own workstations and show real activity. Use click-to-walk, WASD/arrows and E to interact, or use the accessible member list. Chat uses the same send actions as the original interface. No groups means no office entry, canvas or automatic generation.
 
-Version 0.4.0 uses Phaser 4.2.1, a fixed 2x character scale and a 96-preset LPC character library. Every four employees occupy one work room; members five and nine add connected work rooms. Seeded room placement selects three facilities from cafe, library, arcade, restaurant, mocktail bar and gym. Walls have physical footprints; automatic doors connect rooms to the corridor. A left minimap shows rooms, moving coworkers and the camera area. Click or drag to inspect; Follow or character movement restores following.
+Version 0.6.1 uses Three.js 0.186.1 for an orthographic 3D view and Phaser 4.2.1 for movement and simulation. Animated coworkers use the supplied rigged model with independently assigned skin, hair and clothing colors. Every four employees occupy one work room; members five and nine add connected work rooms. Each group floor reserves one meeting room, two seeded leisure facilities and a screening room in the east wing. Reception has its own welcome studio and three leisure facilities, plus a screening room. Unused room slots become gardens. Walls and furniture have physical footprints, automatic doors connect rooms to the corridor, and the map supports room inspection and camera following.
 
-Facilities support brewing, seated page turns, a scored 30-second arcade round, lunch assembly, timed mocktail mixing and a six-stretch rhythm activity. Coworkers reserve reachable break spots and exchange short scene-only greetings; real Harness work preempts leisure. Closing a panel cancels its activity. Quiet motion pauses autonomous movement and ambient effects. All game interface text is English, with readable system typography.
+Facilities support brewing, seated page turns, a scored 30-second arcade round, lunch assembly, timed mocktail mixing and a six-stretch rhythm activity. Coworkers reserve reachable break spots and use individual sofa seats; real Harness work preempts leisure. Closing a panel cancels its activity. Quiet motion pauses autonomous movement and reduces ambient effects. Sunlight and evening lighting follow local time. The modern game HUD provides a room map, camera rotation, zoom, overview and follow controls; all game interface text is English.
 
-Licenses, pinned sources and asset manifests are retained under `src/client/assets/lpc/`, `lpc-cast/`, `ninja/` and `custom/`. See the [campus design](../docs/office-campus.md) for geometry, module boundaries and the custom asset pipeline.
+Licenses, pinned sources and asset manifests are retained under `src/client/assets/`. Architecture and furnishings are procedural; characters, the lift and TV use owner-supplied models with source records in `office-worker/`, `elevator/` and `cinema/`. Momo retains its separately credited CC0 sprite. Older LPC resources keep their existing licenses and credits. The new project logo and its generation prompt are recorded in [brand sources](../docs/branding/SOURCES.md).
 
-Missing pixel appearances can be generated by each Bot's configured text model and saved on `bot.officeAvatar`. Regenerate with a description from the character card. Invalid output leaves the previous or built-in appearance intact. AI design consumes tokens; saved appearances are reused. Per-room `office.theme` stores validated wall/floor/accent colors and day/night state. Geometry uses stable seeded room templates; AI currently customizes palettes and atmosphere.
+Portraits and bounded appearance traits can be generated by each Bot's configured text model and saved on `bot.officeAvatar`. Regenerate with a description from the character card. Invalid output leaves the previous or built-in appearance intact. Background portrait generation preserves the independent 3D wardrobe; explicit user descriptions can influence its colors. AI design consumes tokens; saved appearances are reused. Per-room `office.theme` stores validated wall/floor/accent colors and day/night state. Geometry uses stable seeded templates; free-form layout editing and cross-device multiplayer remain [planned work](../README.md#roadmap). The screening-room TV currently shows a static illustration.
 
 ## Office development
 
@@ -219,13 +247,19 @@ The chats themselves are dsh Sessions and are not in `bot/`: they are in `~/.dsh
 
 ## Development
 
-You need Node 24, pnpm and a deepseek-harness checkout with its dependencies installed, next to this repository (`../deepseek-harness`, or set `DSH_HARNESS`). The Desktop test bench also needs `xvfb-run` and `ffmpeg`. Web screenshots need Chrome or Chromium (`CHROME_BIN`; by default `google-chrome` or `chromium`).
+Work from `ds-bot/` with Node.js 22.19 or later and npm. The default setup uses `npm run harness` to install the pinned test and lint packages into `dev/harness/`; a separate Harness checkout is optional for those checks. For a cross-platform office preview, follow [Office development](#office-development).
+
+The optional shell benches below require pnpm, a Unix-like environment and a deepseek-harness checkout with its dependencies installed, next to this repository (`../deepseek-harness`, or set `DSH_HARNESS`). The Linux Desktop bench also needs `xvfb-run` and `ffmpeg`. Scripted Web screenshots need Chrome or Chromium (`CHROME_BIN`; by default `google-chrome` or `chromium`).
 
 ```sh
-npm ci                                   # esbuild, for the client build
+npm ci                                   # build and runtime dependencies
+npm run harness                          # pinned test dependencies and oxlint
 npm run build                            # src/client → client.js
 npm test                                 # unit tests
-npm run lint                             # oxlint from the dsh repository (.oxlintrc.json)
+node scripts/build-client.mjs --check     # verify the generated client
+npm run lint                             # oxlint using .oxlintrc.json
+
+# Optional checkout-based shell benches:
 dev/bench.sh dev 3100 8800 start         # Web test bench: mock model + dsh Web, data in ../.dsh-test-dev
 dev/desktop-linux/desktop.sh dev start   # Desktop test bench: mock model + dsh Desktop in Xvfb
 CONTEXT_WINDOW=100000 CHECK_RATIO=0.45 dev/bench.sh smoke 3101 8801 reset && node dev/smoke.mjs smoke 3101
@@ -239,7 +273,7 @@ dev/check.sh                             # all checks (see below)
 - **Ports**: every script takes `SLOT=n` (0-9, default 0) so that several people or sessions on one machine do not collide: Web bench `31n0` and mock `88n0`, smoke `31n1` and `88n1`, Desktop mock `88n2`, and so on. A Desktop uses about 1 GB of memory; stop it when you are done.
 - **Real models** (these cost tokens): `dev/steward-eval.mjs` sends hand-written conversation endings through the context steward's own prompt to an OpenAI-compatible route (or, with `--api messages`, an Anthropic Messages route such as DeepSeek's official one) and checks each decision. `dev/llm-tap.mjs <port> <upstream base URL> <log.jsonl> [body dir]` is a logging pass-through for either format: point a provider's `baseURL` at it, and it writes one JSON line per call (steward, checkpoint, handoff note or main turn, the Bot's name, token usage, the answer, and where the request first differs from the same Bot's previous one, which is what a provider's cache can reuse; never headers). With a body dir it also saves every request body. Each file explains its use at the top.
 - **Screenshots**: `dev/ui-shots.mjs` works for both apps (`desktop <dsh repo> <dir> <renderer port>` or `web <dsh repo> <dir> <bench name> <web port>`).
-- `npm test` loads the `@deepseek-ai/*` packages from the deepseek-harness checkout.
+- `npm test` loads the `@deepseek-ai/*` packages from `dev/harness/` by default; `DSH_HARNESS` can select an external Harness installation or checkout instead.
 
 ## Layout
 

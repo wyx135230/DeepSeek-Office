@@ -71,6 +71,24 @@ test('rejects invalid AI pixels, palette indexes, giant data and unsafe colors',
   }
 })
 
+test('AI game appearance survives validation with bounded traits and no executable fields', () => {
+  const gameAppearance = { body: 'f', skin: 'honey', hair: 'short-curls', outfit: 'polo', hairColor: '#c9a95e', shirtColor: '#62947a', pantsColor: '#344253', shoesColor: '#76513a', accessories: ['glasses', 'name-badge'] }
+  const avatar = cleanPixelAvatar({ ...defaultPixelAvatar(bots[0]), gameAppearance: { ...gameAppearance, script: 'ignored' } })
+  assert.equal(avatar.version, 2)
+  assert.deepEqual(avatar.gameAppearance, gameAppearance)
+  for (const bad of [{ body: 'alien' }, { skin: 'url(x)' }, { hair: '../sprite.png' }, { outfit: 'script' }, { hairColor: 'url(x)' }, { accessories: ['<script>'] }, { accessories: Array(200).fill('glasses') }]) {
+    assert.throws(() => cleanPixelAvatar({ ...avatar, gameAppearance: { ...gameAppearance, ...bad } }), /appearance|character|color|accessor/i)
+  }
+})
+
+test('saved portrait-only avatars remain valid without forced regeneration', () => {
+  const { gameAppearance: _gameAppearance, ...legacy } = defaultPixelAvatar(bots[0])
+  const result = cleanPixelAvatar(legacy)
+  assert.equal(result.version, 1)
+  assert.equal(result.gameAppearance, undefined)
+  assert.deepEqual(result.pixels, legacy.pixels)
+})
+
 test('theme customization is a bounded data interface and never accepts executable content', () => {
   assert.equal(cleanOfficeTheme({ name: 'Rainy reading room', wall: '#e8dcc8', floor: '#bc986e', accent: '#729978', night: true }).night, true)
   assert.throws(() => cleanOfficeTheme({ wall: 'url(https://evil)' }))

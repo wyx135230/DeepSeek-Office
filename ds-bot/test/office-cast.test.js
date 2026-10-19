@@ -90,3 +90,24 @@ test('the library retains its pin, license, character credits and precise source
     assert.ok(entry.path.includes(entry.style))
   }
 })
+
+test('AI traits replace the seeded look in every authored pose and remain stable on reload', () => {
+  const gameAppearance = { body: 'f', skin: 'coffee', hair: 'short-curls', outfit: 'polo', hairColor: '#e2bd67', shirtColor: '#62947a', accessories: ['glasses'] }
+  const bot = { id: 'ai-designer', officeAvatar: { gameAppearance } }
+  const preset = cast.characterPreset(bot)
+  assert.equal(preset.body, 'f')
+  assert.equal(preset.skin, 'coffee')
+  assert.equal(preset.hair, 'short-curls')
+  assert.equal(preset.outfit, 'polo')
+  assert.equal(loadCast().characterPreset(bot).id, preset.id)
+  assert.notEqual(cast.characterPreset({ ...bot, officeAvatar: { gameAppearance: { ...gameAppearance, hair: 'bun' } } }).id, preset.id)
+  for (const pose of ['walk', 'idle', 'sitting']) {
+    const layers = [...cast.characterLayers(bot, pose)]
+    assert.ok(layers.includes(`cast-f-head-coffee-${pose}`))
+    assert.ok(layers.includes(`cast-f-shirt-polo-${pose}`))
+    assert.ok(layers.includes(`cast-hair-short-curls-${pose}`))
+    assert.ok(layers.every(layer => cast.CAST_ASSETS[layer]))
+  }
+  const invalid = { id: bot.id, officeAvatar: { gameAppearance: { ...gameAppearance, hair: 'missing' } } }
+  assert.equal(cast.characterPreset(invalid).id, cast.characterPreset({ id: bot.id }).id)
+})

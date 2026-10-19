@@ -1,4 +1,5 @@
 import { hashOf } from '../../shared/office.js'
+import { cleanGameAppearance } from '../../shared/office/appearance.js'
 import asset0 from '../assets/lpc/m-body-walk.png'
 import asset1 from '../assets/lpc/m-head-walk.png'
 import asset2 from '../assets/lpc/m-body-idle.png'
@@ -237,6 +238,13 @@ export const CHARACTER_PRESETS = Object.freeze(
 )
 
 export function characterPreset(bot) {
+  if (bot?.officeAvatar?.gameAppearance) {
+    try {
+      const appearance = cleanGameAppearance(bot.officeAvatar.gameAppearance)
+      const hair = HAIRS.find(entry => entry.id === appearance.hair), outfit = OUTFITS.find(entry => entry.id === appearance.outfit)
+      return { ...appearance, id: `ai-${appearance.body}-${appearance.hair}-${appearance.skin}-${appearance.outfit}-${hashOf(JSON.stringify(appearance))}`, hairStyle: hair.style, clothingStyle: outfit.style, appearance }
+    } catch { /* A legacy or damaged saved design keeps its built-in character. */ }
+  }
   return CHARACTER_PRESETS[hashOf(String(bot?.id ?? 'studio-visitor')) % CHARACTER_PRESETS.length]
 }
 

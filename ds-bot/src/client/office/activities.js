@@ -222,7 +222,7 @@ function ExerciseBreak({ sceneApi }) {
 export function OfficeActivity({ interaction, roomId, sceneApi, onClose }) {
   const panel = useRef(null)
   const kind = interaction.kind
-  const title = { coffee: 'Coffee break', reading: 'The reading nook', arcade: 'Arcade corner', meal: 'The lunch counter', drink: 'The mocktail bar', exercise: 'A stretch break' }[kind]
+  const title = { rest: 'A comfortable break', coffee: 'Coffee break', reading: 'The reading nook', arcade: 'Arcade corner', meal: 'The lunch counter', drink: 'The mocktail bar', exercise: 'A stretch break' }[kind]
   useEffect(() => {
     const scene = sceneApi.current
     panel.current?.querySelector('button')?.focus()
@@ -235,5 +235,5 @@ export function OfficeActivity({ interaction, roomId, sceneApi, onClose }) {
     if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus() }
     else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus() }
   } }, h('div', { className: 'of-section-heading' }, h('h2', null, title), h('button', { type: 'button', className: 'of-text-button', onClick: onClose }, 'Close')),
-  kind === 'coffee' ? h(CoffeeBreak, { sceneApi }) : kind === 'reading' ? h(ReadingBreak, { sceneApi }) : kind === 'meal' ? h(MealBreak, { sceneApi }) : kind === 'drink' ? h(DrinkBreak, { sceneApi }) : kind === 'exercise' ? h(ExerciseBreak, { sceneApi }) : h(StarArcade, { sceneApi, roomId }))
+  kind === 'rest' ? h('div', null, h('p', { className: 'of-muted' }, 'Settle in for a moment. Close this panel to stand up.'), h('button', { type: 'button', className: 'of-button of-primary', onClick: () => sceneApi.current?.beginActivity('rest') }, 'Sit down')) : kind === 'coffee' ? h(CoffeeBreak, { sceneApi }) : kind === 'reading' ? h(ReadingBreak, { sceneApi }) : kind === 'meal' ? h(MealBreak, { sceneApi }) : kind === 'drink' ? h(DrinkBreak, { sceneApi }) : kind === 'exercise' ? h(ExerciseBreak, { sceneApi }) : h(StarArcade, { sceneApi, roomId }))
 }

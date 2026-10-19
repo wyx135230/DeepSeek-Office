@@ -54,6 +54,17 @@ test('concurrent automatic avatar requests share one generation', async () => {
   assert.equal(requests.length, 1)
 })
 
+test('AI designs persist playable traits and regeneration replaces the complete scene look', async () => {
+  const first = { ...defaultPixelAvatar({ id: 'a' }), gameAppearance: { body: 'f', skin: 'honey', hair: 'bun', outfit: 'polo', shirtColor: '#62897a', accessories: ['glasses'] } }
+  const next = { ...first, gameAppearance: { body: 'm', skin: 'bronze', hair: 'cowlick', outfit: 'v-neck', hairColor: '#d2b86c', accessories: ['scarf'] } }
+  const { rt, requests, saved } = runtime([first, next])
+  await rt.officeEndpoint('office-avatar', { botId: 'a', roomId: 'r' })
+  assert.deepEqual(saved().bots.a.officeAvatar.gameAppearance, first.gameAppearance)
+  await rt.officeEndpoint('office-avatar', { botId: 'a', roomId: 'r', regenerate: true, prompt: 'Golden cowlick, warm scarf, bronze skin.' })
+  assert.deepEqual(saved().bots.a.officeAvatar.gameAppearance, next.gameAppearance)
+  assert.match(requests[1].messages[0].content[0].text, /gameAppearance/)
+})
+
 test('one window cancelling does not cancel another window sharing its automatic design', async () => {
   let resolve
   const reply = new Promise(done => { resolve = done })
@@ -93,6 +104,15 @@ test('invalid AI output cannot replace the existing appearance', async () => {
   bot.officeAvatar = before
   await assert.rejects(rt.officeEndpoint('office-avatar', { botId: 'a', roomId: 'r', regenerate: true }), /pixel|character/i)
   assert.deepEqual(bot.officeAvatar, before)
+})
+
+test('a portrait-only model response cannot silently claim to redesign the game character', async () => {
+  const previous = defaultPixelAvatar({ id: 'a' })
+  const { gameAppearance, ...legacy } = previous
+  const { rt, bot } = runtime([legacy])
+  bot.officeAvatar = previous
+  await assert.rejects(rt.officeEndpoint('office-avatar', { botId: 'a', roomId: 'r', regenerate: true }), /playable character appearance/)
+  assert.deepEqual(bot.officeAvatar.gameAppearance, gameAppearance)
 })
 
 test('no room or a nonmember cannot trigger an AI request', async () => {
