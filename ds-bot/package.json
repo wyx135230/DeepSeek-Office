@@ -1,6 +1,6 @@
 {
   "name": "deepseek-office",
-  "version": "0.6.1",
+  "version": "0.7.0",
   "description": "DeepSeek Office: persistent AI teammates in a detailed, interactive 2.5D office for DeepSeek Harness",
   "keywords": [
     "dsh-plugin",
@@ -46,6 +46,8 @@
     "src/client/assets/office-worker/SOURCES.md",
     "src/client/assets/elevator/SOURCES.md",
     "src/client/assets/cinema/SOURCES.md",
+    "src/client/assets/dialogue/",
+    "src/client/assets/sidebar/",
     "LICENSE"
   ],
   "scripts": {

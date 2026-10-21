@@ -143,6 +143,15 @@ export function install(rt) {
   }
 
   rt.officeEndpoint = async (endpoint, body, signal) => {
+    if (endpoint === 'office-presence') {
+      signal?.throwIfAborted()
+      await rt.load()
+      const room = roomOf(body.roomId)
+      return {
+        sessions: Object.entries(room.sessions ?? {}).filter(([id]) => room.members.includes(id) && rt.state.bots[id]).map(([botId, sessionId]) => ({ botId, sessionId })),
+        rounds: [...(rt.roomProgress ?? [])].filter(([, round]) => round.roomId === room.id).map(([callId, round]) => ({ callId, replies: round.replies, speaking: round.speaking ?? null })),
+      }
+    }
     writable()
     signal?.throwIfAborted()
     await rt.load()

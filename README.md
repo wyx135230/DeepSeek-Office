@@ -4,7 +4,7 @@
   <p><strong>A place to work, meet and take a break with your AI team.</strong></p>
   <p>A modern 2.5D office simulation for DeepSeek Harness, built on persistent AI teammates and real group conversations.</p>
   <p><strong>English</strong> · <a href="README.zh.md">简体中文</a></p>
-  <p><code>v0.6.1</code> · <code>Three.js + Phaser</code> · <code>Apache-2.0 code</code></p>
+  <p><code>v0.7.0</code> · <code>Three.js + Phaser</code> · <code>Apache-2.0 code</code></p>
   <p><a href="#highlights">Highlights</a> · <a href="#screenshots">Screenshots</a> · <a href="#quick-start">Quick start</a> · <a href="#how-to-play">How to play</a> · <a href="#roadmap">Roadmap</a></p>
 </div>
 
@@ -17,6 +17,13 @@ Create a team, give everyone a role, and walk into its office. Each group chat b
 
 DeepSeek Office builds on [DS Bot](https://github.com/Fei2411/DeepSeek-Bot) and uses the public plugin interfaces of [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness). Long-lived identities, memory, group collaboration, model settings and permissions remain part of the same team.
 
+## What's new in 0.7.0
+
+- **Warmer rooms**: work studios gain desk pads, stationery, lamps or headphones, cable trays, corkboards and rugs; coffee studios gain cup shelves, bean jars and botanical prints; screening rooms gain acoustic panels, fabric details, wall lights and cabinet vents. These are visual additions within the existing layout, with the existing interface and interaction rules preserved.
+- **A phone in the scene**: open private and group chats from anywhere, or read web pages in the phone's Browser app. The phone uses the existing Sessions and native composer.
+- **Clearer conversations and navigation**: face-to-face dialogue has illustrated portraits and message-history controls. The upper-right HUD brings together the map, camera controls, floors, team and options; nearby prompts and compact activity cards support keyboard interaction.
+- **Updated characters**: the supplied long-haired character model is rigged for the existing idle, walk, sit, drink and exercise animations, with independent appearance colors.
+
 <a id="highlights"></a>
 ## What makes it interesting
 
@@ -24,10 +31,11 @@ DeepSeek Office builds on [DS Bot](https://github.com/Fei2411/DeepSeek-Bot) and 
 |---|---|
 | **One group, one floor** | Give different teams their own offices. Each floor keeps its seeded room placement and grows work rooms as members join. |
 | **Meetings inside the scene** | Take the head seat, watch coworkers enter in order, and send messages to the real group from the meeting composer. |
-| **A team you can recognize** | Coworkers have individual skin, hair, shirt, trouser and shoe colors, with walking and seated animations. |
+| **A team you can recognize** | Coworkers have individual skin, hair, upper garment, lower garment and shoe colors, with walking and seated animations. |
 | **Small breaks between tasks** | Brew coffee, turn pages, catch stars at the arcade, prepare lunch, mix a mocktail or follow a stretch rhythm. |
 | **A shared screening room** | Six three-person sofas face a large curved TV. People can use separate seats on the same sofa. |
 | **An office with a sense of time** | Local time shapes sunlight and evening lighting. Plants, gardens and the surrounding city complete the setting. |
+| **Chats and a browser in your pocket** | Use **Phone** or `P` to open private chats, groups and a mobile-style web reader without walking back to a desk. |
 | **Your existing AI tools** | Keep private chats, group messages, memory, capabilities, scheduled tasks and usage statistics. Real work takes priority over leisure animations. |
 
 The meeting-room wall display opens the group's complete conversation, including history and live replies. Short speech bubbles show recent messages above the speaker; the chat panel keeps the full text and attachments.
@@ -77,7 +85,7 @@ Screenshots record working development builds; room arrangements vary by group. 
 
 ### 2. Get and install the package
 
-Use the `deepseek-office-0.6.1.tgz` supplied with a build or published release. If a package is not available, build it from this checkout. Source builds need Node.js **22.19 or later** and npm:
+Use the `deepseek-office-0.7.0.tgz` supplied with a build or published release. If a package is not available, build it from this checkout. Source builds need Node.js **22.19 or later** and npm:
 
 ```sh
 cd ds-bot
@@ -90,24 +98,26 @@ npm pack --pack-destination ../artifacts
 In **Harness Desktop**, open **Plugins → Add plugin**, enter the package's absolute local path, install and enable it, then restart if prompted. For example:
 
 ```text
-C:\plugins\deepseek-office-0.6.1.tgz
+C:\plugins\deepseek-office-0.7.0.tgz
 ```
 
 For **Harness Web**, with pnpm available, replace the example with your actual package path:
 
 ```sh
-npx @deepseek-ai/dsh@0.2.0-rc.2 plugin --profile web add "/absolute/path/deepseek-office-0.6.1.tgz"
+npx @deepseek-ai/dsh@0.2.0-rc.2 plugin --profile web add "/absolute/path/deepseek-office-0.7.0.tgz"
 npx @deepseek-ai/dsh@0.2.0-rc.2 web
 ```
 
 <details>
 <summary>Installing by package name after npm publication</summary>
 
-The configured npm package name is `deepseek-office`. After an owner publishes it to the selected registry, the add-plugin field can accept `deepseek-office` or a version such as `deepseek-office@0.6.1`. Uploading source to GitHub alone does not publish that npm package. Use the local package if registry publication has not happened.
+The configured npm package name is `deepseek-office`. After an owner publishes it to the selected registry, the add-plugin field can accept `deepseek-office` or a version such as `deepseek-office@0.7.0`. Uploading source to GitHub alone does not publish that npm package. Use the local package if registry publication has not happened.
 
 The plugin lives in the repository's `ds-bot/` subdirectory. A repository URL is therefore not interchangeable with a published package name.
 
 </details>
+
+To update an existing DeepSeek Office installation, add the new package through the same profile's Plugins page or public CLI, then restart Harness. Keep the existing team data and use the same profile and `DSH_HOME`.
 
 ### 3. Create your first office
 
@@ -132,7 +142,9 @@ The office entry appears once the team has a group. With no groups, the regular 
 | Mouse wheel / zoom buttons | Zoom in or out |
 | **Rotate view / Overview** | Rotate the camera or inspect the whole floor |
 | Floor map / **Follow** | Inspect a room, then return to following your character |
-| **Quiet motion** | Pause autonomous leisure movement and reduce ambient animation |
+| **Phone** / `P` | Take out the phone for chats and web pages |
+| `Esc` | Close the current panel or put the phone away |
+| **More → Quiet motion** | Pause autonomous leisure movement and reduce ambient animation |
 | **Back to chat** | Leave the office view and use the ordinary conversation |
 
 ### Call a meeting
@@ -143,15 +155,21 @@ Interact with the wall display or select **Open display** to read the full group
 
 ### Take a break or change floors
 
-Click a sofa and choose **Sit down**; close the activity panel to stand up. In **Screening room**, several people can share a sofa's independent seats. Other leisure rooms offer coffee, books, a 30-second star-catching arcade round, lunch, mocktails or stretching, depending on that floor's facilities. You can also greet Momo in the corridor.
+Approach a sofa or facility and press `E`, or click its nearby interaction prompt. Rest and coffee start directly; activity cards show the relevant controls. Close the activity or move away to resume walking. In **Screening room**, several people can share a sofa's independent seats. Other leisure rooms offer coffee, books, a 30-second star-catching arcade round, lunch, mocktails or stretching, depending on that floor's facilities. You can also greet Momo in the corridor.
 
 Choose **Lift** on the floor map to locate the elevator. Walk inside, read the destination list and select a floor. The cabin closes, the current scene fades, and the destination appears before the doors open.
 
+### Talk face to face or use the phone
+
+Approach a coworker and press `E`, or select them through **Team**. The dialogue panel shows an illustrated portrait, one message at a time, and controls for earlier replies. Choose private chat or a group mention; the native composer keeps attachments, voice, model selection and other conversation tools available.
+
+Click **Phone** below the HUD map or press `P`. Its chat app lists every group and teammate, with search, unread markers and recent-message previews. These conversations use the same Sessions as ordinary chat. The **Browser** app fetches pages through the computer running DSH, using its network and system proxy, and displays them in a sandboxed mobile layout. Pages needing sign-in, forms or complex scripts can be opened in the system browser. Press `Esc` to put the phone away. The player pauses while holding it; the world and agent turns continue.
+
 ### Make the team feel like yours
 
-Choose a teammate to inspect or regenerate its appearance. **Decorate** adjusts the floor's theme; AI design can propose wall, floor and accent colors. Explicit appearance descriptions can influence the character's palette. Optional AI design makes additional model calls; saved results are reused.
+Choose a teammate to inspect or regenerate its appearance. **More → Decorate** adjusts the floor's theme; AI design can propose wall, floor and accent colors. Explicit appearance descriptions can influence the character's palette. Optional AI design makes additional model calls; saved results are reused.
 
-Current 3D characters share one body, hairstyle and clothing shape. Distinct palettes provide identity; multiple character meshes, furniture placement and room-shape editing are future work. The 3D wardrobe is stored in the current browser.
+Current 3D characters share the supplied long-haired model with a jacket, skirt and boots. Distinct palettes provide identity; the existing trouser-color channel colors the skirt. Multiple character meshes, furniture placement and room-shape editing are future work. The 3D wardrobe is stored in the current browser.
 
 <a id="floor-layout"></a>
 ## How floors are arranged
@@ -176,7 +194,9 @@ The first six room slots are shuffled deterministically from the group ID, so re
 <a id="current-scope"></a>
 ## Current scope
 
-Version **0.6.1** focuses on a playable office setting for an existing AI team. Group messages, agent work and permissions use the original Harness flow. The scene currently has **no cross-device multiplayer, cloud-synchronized avatar placement, free-form building editor or management economy**. The screening-room TV has a static display; video playback is not implemented. The 3D view requires WebGL, and phones are not the primary target yet.
+Version **0.7.0** combines the playable office with in-scene phone chat, a mobile-style web reader, face-to-face dialogue and a first decoration pass for work studios, coffee studios and screening rooms. Other leisure facilities keep their existing furnishings. The decoration pass preserves room layouts, paths, seats, interaction targets and the existing UI; group messages, agent work and permissions use the original Harness flow.
+
+The scene currently has **no cross-device multiplayer, cloud-synchronized avatar placement, free-form building editor or management economy**. The screening-room TV has a static display; video playback is not implemented. The 3D view requires WebGL. The in-game phone is a feature of the desktop scene; mobile devices are not the primary target yet.
 
 More on memory, permissions, working folders, models, scheduled tasks and backups: [plugin reference](ds-bot/README.md).
 
@@ -203,6 +223,7 @@ Edit `src/client/` and rebuild; `client.js` is generated and committed. For an i
 | Characters and individual looks | [Character checks](docs/office-character-verification.md) |
 | Meetings, history and the group composer | [Meeting checks](docs/office-meeting-verification.md) |
 | Floor travel and screening seats | [Elevator checks](docs/office-elevator-verification.md) · [screening-room checks](docs/office-cinema-verification.md) |
+| Phone, dialogue and room details | [Phone design](docs/plans/2026-10-21-office-phone.md) · [dialogue design](docs/plans/2026-10-20-visual-novel-dialogue.md) · [decoration scope](docs/plans/2026-10-21-office-decoration.md) |
 
 ## Credits and license
 
@@ -218,6 +239,6 @@ The new project logo is original AI-generated artwork; see [brand source and pro
 These are development plans, not features included in the current release.
 
 - [ ] **Cross-device multiplayer** — shared rooms, presence, player movement and appearance synchronization, reconnection and session permissions, so people on different computers can enter the same office.
-- [ ] **Richer environments** — improve furniture, materials, lighting, gardens and architectural detail; expand character shapes, outfits and animation quality.
+- [ ] **Richer environments** — extend the current work/coffee/screening-room decoration pass to other facilities, gardens and architecture; expand character shapes, outfits and animation quality.
 - [ ] **More expressive interactions** — refine approaching, turning, sitting and standing; add richer facility behavior, meeting feedback and video controls for the screening room.
 - [ ] **User-designed spaces** — let users place furniture, adjust room layouts, choose styles and save reusable floor templates, then explore AI-assisted scene design.

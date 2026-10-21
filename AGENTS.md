@@ -24,6 +24,7 @@ The Bot team:
 3. **Only original material.** Do not copy code, text, icons, logos or graphics from other products or websites.
 4. **`client.js` is generated.** Change `ds-bot/src/client/`, then run `npm run build` and commit both files. Never edit `client.js` by hand.
 5. **Do not touch the user's own DSH data.** The desktop app keeps its data in its own `DSH_HOME`; its import only reads `~/.dsh` and never writes there. The test bench keeps its data in `.dsh-test-<name>/`. Never point a test at `~/.dsh`, at the desktop app's data or at a DSH that the user runs.
+6. **Clean up after every change.** Before handing work back, stop the test processes you started and remove the task's temporary test environments, throwaway scripts, generated screenshots, temporary test data and logs once verification is complete. Preserve source, permanent regression tests, required build outputs such as `client.js`, project assets, documentation and requested deliverables. Verify cleanup paths stay inside the project, and do not remove user data or unrelated pre-existing files.
 
 ## Commands
 

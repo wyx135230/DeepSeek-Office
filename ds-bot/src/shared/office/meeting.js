@@ -8,8 +8,13 @@ export function meetingPlaces(world, ids) {
 
 export function meetingCaption(text, limit = 72) {
   const clean = String(text ?? '').replace(/\s+/g, ' ').trim()
-  const chars = typeof Intl.Segmenter === 'function' ? [...new Intl.Segmenter(undefined, { granularity: 'grapheme' }).segment(clean)].map(s => s.segment) : Array.from(clean)
-  return chars.length > limit ? `${chars.slice(0, limit).join('')}…` : clean
+  const segments = typeof Intl.Segmenter === 'function' ? new Intl.Segmenter(undefined, { granularity: 'grapheme' }).segment(clean) : clean
+  const chars = []
+  for (const segment of segments) {
+    if (chars.length === limit) return `${chars.join('')}…`
+    chars.push(typeof segment === 'string' ? segment : segment.segment)
+  }
+  return clean
 }
 
 export function createMeetingSpeech(now = Date.now) {

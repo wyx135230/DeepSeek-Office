@@ -31,6 +31,9 @@ oak #b99970, muted foliage #688373, concrete #c5cdce. Segoe UI / system sans
 for readable controls. The model is the focal point; a restrained floor
 directory, compact status header and floating camera tools surround it.
 
+The owner-approved [compact HUD](2026-10-20-office-hud.md) consolidates that
+navigation in the top-right corner, with room directories opened on demand.
+
 Click-to-walk and E interaction use raycasting into the same world. WASD is
 relative to the screen. Provide zoom, quarter-turn, overview and follow.
 Map inspection does not move people. Existing conversation/activities retain
@@ -53,7 +56,9 @@ their contracts and keyboard focus behavior. Small screens use a compact map.
 - No changes to Harness, host APIs, shared life/world geometry or user DSH data.
 - Existing uncommitted changes belong to the user. Work in place; do not reset,
   overwrite the tree from Git, commit their work, or create an unrelated branch.
-- Dispose geometry, materials, textures, listeners and the WebGL context on close.
+- Dispose geometry, materials, textures, listeners and the WebGL context when
+  the scene is destroyed. Per the owner's 2026-10-20 request, returning to chat
+  only hides the office; it retains its simulation and resumes the last floor.
 - Picking remains correct after rotation, resize and zoom; movement must keep
   its speed and collision boundaries; quiet motion still permits walking.
 - Include Three.js license; no CDN or paid asset dependency at runtime.
