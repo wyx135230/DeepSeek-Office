@@ -38,7 +38,8 @@ export function createOfficeView(element, world, floor, characters, elevator, te
     releaseBatch(); architecture?.dispose(); architectureKit?.dispose()
     architectureKit = createModelKit()
     architecture = buildArchitecture(architectureKit, stage, world, theme ?? {})
-    releaseBatch = batchArchitecture(architecture.root)
+    const releases = [architecture.root, ...architecture.detailRoots].map(batchArchitecture)
+    releaseBatch = () => { for (const release of releases) release() }
   }
   build(currentTheme)
   const people = new Map(), dog = makeDog(kit, stage)

@@ -3,6 +3,8 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js'
 import { clone } from 'three/addons/utils/SkeletonUtils.js'
 
 const COLORS = { OfficeSkin: 'skin', OfficeHair: 'hair', OfficeShirt: 'shirt', OfficeTrousers: 'pants', OfficeShoes: 'shoes' }
+const BONE_X = new THREE.Vector3(1, 0, 0)
+const PHONE_POSE = { RightArm: -1, RightForeArm: -.5, Head: .2 }
 
 export async function loadOfficeCharacters(source) {
   const loader = new GLTFLoader()
@@ -97,7 +99,23 @@ export function makeWorker(kit, scene, bot, visitor, library, look) {
   const cup = kit.group(body)
   kit.cylinder(cup, 0, 0, 0, 1.5, 1.2, 3, '#eee9df', 12)
   kit.cylinder(cup, 0, 1.55, 0, 1.15, 1.15, .12, '#5b4232', 12)
+  const phone = visitor ? kit.group(body) : null
+  if (phone) {
+    kit.box(phone, 0, 0, 0, 3.4, 6.6, .55, '#2f3940', .22)
+    kit.box(phone, 0, 0, .3, 2.9, 5.3, .06, '#e7efe9')
+    kit.box(phone, 0, 2.95, .34, .22, .2, .05, '#1d262b')
+    phone.visible = false
+  }
   const hand = instance.model.getObjectByName('RightHand'), handPoint = new THREE.Vector3()
+  const arm = phone ? instance.model.getObjectByName('RightArm') : null
+  const foreArm = phone ? instance.model.getObjectByName('RightForeArm') : null
+  const headBone = phone ? instance.model.getObjectByName('Head') : null
+  const armBase = new THREE.Quaternion(), foreArmBase = new THREE.Quaternion(), headBase = new THREE.Quaternion()
+  if (arm) armBase.copy(arm.quaternion)
+  if (foreArm) foreArmBase.copy(foreArm.quaternion)
+  if (headBone) headBase.copy(headBone.quaternion)
+  const boneTurn = new THREE.Quaternion()
+  let phoneLift = 0
   return { root, look,
     update(actor, time, quiet, selected) {
       root.position.set(actor.sprite.x, 0, actor.sprite.y)
@@ -105,6 +123,13 @@ export function makeWorker(kit, scene, bot, visitor, library, look) {
       const velocity = actor.sprite.body.velocity
       const direction = { down: 0, up: Math.PI, right: Math.PI / 2, left: -Math.PI / 2 }[actor.direction] ?? 0
       body.rotation.y = speed > 2 ? Math.atan2(velocity.x, velocity.y) : direction
+      // PropertyMixer skips tracks whose value did not change, so reset the bones to the
+      // mixer pose first; otherwise the arm offset below would pile up frame after frame.
+      if (phone) {
+        if (arm) arm.quaternion.copy(armBase)
+        if (foreArm) foreArm.quaternion.copy(foreArmBase)
+        if (headBone) headBone.quaternion.copy(headBase)
+      }
       instance.animate(actor, time, quiet)
       book.visible = Boolean(actor.exit) && ['reading', 'meal'].includes(actor.activity)
       cup.visible = !speed && ['coffee', 'drink'].includes(actor.activity)
@@ -112,6 +137,23 @@ export function makeWorker(kit, scene, bot, visitor, library, look) {
         instance.model.updateWorldMatrix(true, true)
         hand.getWorldPosition(handPoint); body.worldToLocal(handPoint)
         cup.position.copy(handPoint); cup.position.y += 1; cup.position.z += 1.3
+      }
+      if (phone) {
+        if (arm) armBase.copy(arm.quaternion)
+        if (foreArm) foreArmBase.copy(foreArm.quaternion)
+        if (headBone) headBase.copy(headBone.quaternion)
+        phoneLift = THREE.MathUtils.lerp(phoneLift, actor.holdingPhone ? 1 : 0, quiet ? 1 : .18)
+        if (phoneLift < .002) phoneLift = 0
+        phone.visible = phoneLift > 0
+        if (phone.visible) {
+          if (arm) arm.quaternion.multiply(boneTurn.setFromAxisAngle(BONE_X, PHONE_POSE.RightArm * phoneLift))
+          if (foreArm) foreArm.quaternion.multiply(boneTurn.setFromAxisAngle(BONE_X, PHONE_POSE.RightForeArm * phoneLift))
+          if (headBone) headBone.quaternion.multiply(boneTurn.setFromAxisAngle(BONE_X, PHONE_POSE.Head * phoneLift))
+          instance.model.updateWorldMatrix(true, true)
+          hand.getWorldPosition(handPoint); body.worldToLocal(handPoint)
+          // The hand bone is the wrist, so the slab sits above the grip and in front of the palm.
+          phone.position.copy(handPoint); phone.position.y += 2; phone.position.z += 1.4
+        }
       }
       ring.visible = visitor || selected
       badge.visible = actor.state === 'waiting'

@@ -12,6 +12,14 @@ export function createFurnitureModels(kit) {
     ctx.fillStyle = '#86bca7'; ctx.fillRect(112, 298, 80, 4)
   })
   const screen = kit.material('#ffffff', { map: screenMap, emissive: '#c9e5ed', emissiveMap: screenMap, emissiveIntensity: .3, roughness: .5 })
+  const grille = kit.material('#ffffff', { roughness: .95, map: kit.texture(256, 128, ctx => {
+    ctx.fillStyle = '#354b50'; ctx.fillRect(0, 0, 256, 128)
+    ctx.fillStyle = '#748982'
+    for (let y = 12; y < 116; y += 8) ctx.fillRect(12, y, 232, 2)
+    ctx.fillStyle = '#b9a080'
+    ctx.fillRect(0, 0, 256, 5); ctx.fillRect(0, 123, 256, 5)
+    ctx.fillRect(0, 0, 5, 128); ctx.fillRect(251, 0, 5, 128)
+  }) })
   const monitor = (root, x, z, size = 1) => {
     const group = kit.group(root, x, 25, z); group.scale.setScalar(size)
     kit.box(group, 0, .5, 0, 10, 1, 6, ARCH.steel, .3)
@@ -90,7 +98,7 @@ export function createFurnitureModels(kit) {
     else if (kind === 'television') {
       kit.box(root, w / 2, 10, d / 2, w, 20, d, ARCH.oak, 1)
       kit.box(root, w / 2, 20.7, d / 2, w + 2, 1.4, d + 1, ARCH.woodDark, .4)
-      for (const dx of [w / 4, w * .75]) kit.box(root, dx, 10, d / 2 + d / 2 + .2, w / 2 - 2, 17, .4, '#b9a080', .3)
+      for (const [i, dx] of [w / 4, w * .75].entries()) kit.box(root, dx, 10, d / 2 + d / 2 + .2, w / 2 - 2, 17, .4, i === 0 ? grille : '#b9a080', .3)
     }
     else if (kind === 'reading') { sofa(root, w, '#7d95a1'); kit.box(root, w / 2, 18, 10, 11, .8, 8, '#bd946b', .2); kit.box(root, w / 2, 18.5, 10, 9, .3, 7, ARCH.paper) }
     else if (kind === 'planter') makePlant(kit, root, w / 2, d / 2, 1.15)

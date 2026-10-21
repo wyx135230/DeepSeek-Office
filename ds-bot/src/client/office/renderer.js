@@ -21,6 +21,7 @@ import televisionAsset from '../assets/cinema/television.glb'
 import { loadOfficeTelevision } from './television-3d.js'
 import { inElevator } from '../../shared/office/elevator.js'
 import { meetingPlaces, meetingCaption } from '../../shared/office/meeting.js'
+import { createOfficeEncounter, conversationPlace } from '../../shared/office/interaction.js'
 
 const EMOTES = {
   thinking: 'thinking', typing: 'typing', working: 'typing', reading: 'reading', waiting: 'waiting', speaking: 'speaking', away: 'away',
@@ -29,7 +30,7 @@ const EMOTES = {
 // Dev screenshot hooks can pin the scene clock; otherwise it follows local time.
 const clockNow = () => typeof window !== 'undefined' && window.__OFFICE_TIME__ ? new Date(window.__OFFICE_TIME__) : new Date()
 
-export async function createOfficeRenderer(element, { floor, lobby = false, reducedMotion = false, atElevator = false, signal, onSelect, onExit, onInteract, onHint }) {
+export async function createOfficeRenderer(element, { floor, lobby = false, reducedMotion = false, atElevator = false, signal, onSelect, onExit, onInteract, onCancelInteraction, onHint }) {
   const characters = await loadOfficeCharacters(workerAsset)
   let elevator, television
   try {
@@ -39,10 +40,13 @@ export async function createOfficeRenderer(element, { floor, lobby = false, redu
   } catch (error) { characters.dispose(); elevator?.dispose(); television?.dispose(); throw error }
   let current = floor, quiet = reducedMotion, selected = null, disposed = false, scene
   let path = [], destination = null, nearby = null, pending = null, paused = false, activity = null, interactionStation = null
+  let interactionTarget = null
   let inspection = null
   let liftLatched = atElevator
   let meeting = null, meetingEntered = false
   const speech = new Map()
+  const work = new Map()
+  let encounter = { mode: null }, escortPath = [], escortGoal = null, escortPlanned = 0
   const keys = new Set()
   let resolveReady, rejectReady
   const ready = new Promise((resolve, reject) => { resolveReady = resolve; rejectReady = reject })
@@ -63,6 +67,7 @@ export async function createOfficeRenderer(element, { floor, lobby = false, redu
         this.world = createOfficeWorld(current.members.length, lobby, current.id)
         if (atElevator) this.world.spawn = { ...this.world.elevator.center }
         this.life = createOfficeLife(this.world)
+        this.encounter = createOfficeEncounter(this.world)
         this.light = officeLight(clockNow(), current.theme)
         this.view3d = createOfficeView(element, this.world, current, characters, elevator, television)
         this.images = Object.fromEntries(Object.keys(GAME_ART).map(name => [name, this.textures.get(name).getSourceImage()]))
@@ -96,13 +101,16 @@ export async function createOfficeRenderer(element, { floor, lobby = false, redu
         this.cameraSetup()
         this.cameras.main.fadeIn(quiet ? 0 : 280, 24, 38, 35)
         this.input.on('pointerdown', pointer => {
-          if (paused || activity) return
+          if (paused) return
           element.focus({ preventScroll: true })
           const point = this.view3d.pointAt(pointer.x, pointer.y)
           if (!point) return
+          const previous = interactionTarget?.id
+          if (activity || interactionTarget) this.cancelInteraction()
           const actor = this.actors.find(a => a.id === point.targetId)
           const fixtureTarget = fixtureInteraction(point.fixtureId, point, this.world)
           const target = this.targets().find(t => t.id === point.targetId) ?? (actor ? this.targets().find(t => t.id === actor.id) : fixtureTarget ?? this.targets().find(t => Math.hypot(t.x - point.x, t.y - point.y) < 24))
+          if (target?.id === previous) return
           if (target) this.approach(target)
           else if (canStand(point, this.world)) { pending = null; this.go(point) }
         })
@@ -156,9 +164,20 @@ export async function createOfficeRenderer(element, { floor, lobby = false, redu
       const prop = this.add.graphics()
       const emote = this.add.graphics().setVisible(false)
       const skin = { peach: 0xf0c49a, honey: 0xdca876, bronze: 0xb27a52, coffee: 0x83563d }[characterPreset(bot).skin] ?? 0xf0c49a
-      return { sprite, shadow, label, bubble, prop, emote, emoteType: null, art, skin, presetId: characterPreset(bot).id, direction: 'down', state: 'idle', activity: 'idle', exit: null, stationId: null }
+      return { sprite, shadow, label, bubble, prop, emote, emoteType: null, art, skin, presetId: characterPreset(bot).id, direction: 'down', state: 'idle', activity: 'idle', exit: null, stationId: null, holdingPhone: false }
     }
     position(actor) { return actor.exit ?? actor.sprite }
+    workOf(id) {
+      const entries = [...(work.get(id)?.values() ?? [])].filter(value => value.active)
+      return { active: entries.length > 0, desk: entries.some(value => value.desk), tool: entries.find(value => value.desk)?.tool ?? entries[0]?.tool }
+    }
+    coworkers() {
+      return this.actors.map(actor => {
+        const member = current.members.find(m => m.bot.id === actor.id), live = work.has(actor.id) ? this.workOf(actor.id) : undefined
+        return { id: actor.id, x: this.position(actor).x, y: this.position(actor).y, home: actor.home,
+          doing: member?.here ? member.doing : live ? (live.active ? live : undefined) : member?.doing, desk: live?.active && live.desk }
+      })
+    }
     stand(actor) {
       if (!actor.exit) return
       const point = actor.exit
@@ -198,6 +217,7 @@ export async function createOfficeRenderer(element, { floor, lobby = false, redu
     }
     targets() { return [...this.world.props, ...this.actors.map(actor => ({ id: actor.id, x: this.position(actor).x, y: this.position(actor).y, label: `Talk to ${actor.label.text}`, actor }))] }
     go(point) {
+      this.encounter.interrupt()
       if (inspection) this.followPlayer()
       this.stand(this.player)
       path = findPath(this.player.sprite, point, this.world); destination = path.length ? point : null
@@ -211,15 +231,29 @@ export async function createOfficeRenderer(element, { floor, lobby = false, redu
     approach(target) {
       if (paused || activity) return
       if (nearInteraction(this.position(this.player), [target], this.world)) { this.interact(target); return }
+      if (target.actor) {
+        const spot = conversationPlace(this.world, target, this.position(this.player))
+        if (spot) { pending = target.id; this.go(spot) }
+        return
+      }
       const options = [[0, 0], [0, 24], [24, 0], [-24, 0], [0, -24]].map(([x, y]) => ({ x: target.x + x, y: target.y + y }))
         .map(point => ({ point, route: findPath(this.position(this.player), point, this.world) })).filter(o => o.route.length).sort((a, b) => a.route.length - b.route.length)
       if (options.length) { pending = target.id; this.go(options[0].point) }
     }
     interact(target) {
       path = []; pending = null; destination = null; this.marker.clear(); this.player.sprite.setVelocity(0)
-      if (target.actor) { target.actor.direction = facing(this.player.sprite.x - target.x, this.player.sprite.y - target.y); onSelect?.(target.id) }
+      if (target.actor) {
+        target.actor.direction = facing(this.player.sprite.x - target.x, this.player.sprite.y - target.y)
+        this.encounter.select(target.id, this.coworkers(), this.position(this.player), this.time.now)
+        if (Math.hypot(this.player.sprite.x - target.x, this.player.sprite.y - target.y) < 24) {
+          const spot = conversationPlace(this.world, this.position(target.actor), this.position(this.player))
+          if (spot) { this.stand(this.player); path = findPath(this.position(this.player), spot, this.world) }
+        }
+        onSelect?.(target.id)
+      }
       else if (target.id === 'lift') this.go(this.world.elevator.center)
       else {
+        interactionTarget = ['meeting', 'meeting-board'].includes(target.kind) ? null : target
         interactionStation = this.world.stations.find(s => s.id === target.id)?.id ?? null
         if (target.id === 'dog' && !quiet) this.tweens.add({ targets: this.dog.sprite, y: this.dog.sprite.y - 4, duration: 110, yoyo: true, repeat: 1 })
         onInteract?.(target)
@@ -347,11 +381,30 @@ export async function createOfficeRenderer(element, { floor, lobby = false, redu
       this.frameCount = (this.frameCount ?? 0) + 1
       const started = performance.now()
       const player = this.player.sprite, active = document.activeElement === element && !paused && !activity && !meeting
+      const previousMode = encounter.mode
+      encounter = this.encounter.step(this.coworkers(), this.position(this.player), time, { quiet, blocked: paused || Boolean(activity) || Boolean(meeting) })
+      if (encounter.mode === 'escort' && previousMode !== 'escort') { path = []; destination = null; pending = null; escortPath = []; escortGoal = null; this.marker.clear() }
+      if (previousMode === 'escort' && encounter.mode === 'desk' && !paused) {
+        const coworker = this.actors.find(actor => actor.id === encounter.id)
+        if (coworker) this.player.direction = facing(coworker.home.x - player.x, coworker.home.y - player.y)
+        const focused = document.activeElement
+        if (focused?.matches('[contenteditable="true"]') && !focused.textContent.trim()) element.focus({ preventScroll: true })
+      }
       let dx = 0, dy = 0
       if (active) { dx = Number(keys.has('d') || keys.has('arrowright')) - Number(keys.has('a') || keys.has('arrowleft')); dy = Number(keys.has('s') || keys.has('arrowdown')) - Number(keys.has('w') || keys.has('arrowup')) }
       if (meeting) player.setVelocity(0)
       else if (activity) this.updateActivity(time, delta)
       else if (dx || dy) { if (this.view3d.mode !== 'follow') this.followPlayer(); this.stand(this.player); path = []; pending = null; this.marker.clear(); const movement = this.view3d.movement(dx, dy), speed = keys.has('shift') ? RUN_SPEED : WALK_SPEED; player.setVelocity(movement.x * speed, movement.y * speed) }
+      else if (!paused && encounter.mode === 'escort') {
+        if (encounter.goal) {
+          this.stand(this.player)
+          if (!escortGoal || Math.hypot(escortGoal.x - encounter.goal.x, escortGoal.y - encounter.goal.y) > 16 || time - escortPlanned > 350) {
+            escortGoal = encounter.goal; escortPlanned = time
+            escortPath = findPath(this.position(this.player), escortGoal, this.world)
+          }
+          this.move(this.player, escortPath, RUN_SPEED, delta)
+        } else player.setVelocity(0)
+      }
       else if (!paused) this.move(this.player, path, WALK_SPEED, delta)
       else player.setVelocity(0)
       if (!path.length && destination) { destination = null; this.marker.clear() }
@@ -371,7 +424,7 @@ export async function createOfficeRenderer(element, { floor, lobby = false, redu
       }
       nearby = nearInteraction(this.position(this.player), targets, this.world)
       if (pending && !path.length) { const target = targets.find(t => t.id === pending); pending = null; if (target && nearInteraction(player, [target], this.world)) this.interact(target) }
-      const hint = meeting ? 'Meeting in progress · End meeting to stand up' : nearby ? `E · ${nearby.label}` : 'Click to walk · WASD / arrows · Shift to run'
+      const hint = meeting ? 'Meeting in progress · End meeting to stand up' : encounter.mode === 'escort' ? 'Walking to the desk · Click or move to stop following' : encounter.held ? 'Face-to-face conversation · Move freely to leave' : 'Click to walk · WASD / arrows · Shift to run'
       if (hint !== this.lastHint) { this.lastHint = hint; onHint?.(hint) }
       if (!quiet && nearby && time > (this.nextSparkle ?? 0)) { this.nextSparkle = time + 1100; this.sparkle(nearby) }
       if (!quiet && player.body.speed > 2 && time > this.lastPuff + 190) { this.lastPuff = time; this.puff(player.x, player.y - 1) }
@@ -388,7 +441,7 @@ export async function createOfficeRenderer(element, { floor, lobby = false, redu
         }
         if (member && actor.label.text !== member.bot.name) actor.label.setText(member.bot.name)
       }
-      const lives = meeting ? {} : this.life.step(time, this.actors.map(a => ({ id: a.id, name: a.label.text, state: a.state === 'away' ? 'away' : a.state, x: this.position(a).x, y: this.position(a).y, home: a.home })), { quiet, reserved: [activity?.stationId ?? interactionStation].filter(Boolean) })
+      const lives = meeting ? {} : this.life.step(time, this.actors.map(a => ({ id: a.id, name: a.label.text, state: encounter.desk === a.id ? 'working' : a.state, x: this.position(a).x, y: this.position(a).y, home: a.home })), { quiet, held: encounter.held ? [encounter.held] : [], reserved: [activity?.stationId ?? interactionStation].filter(Boolean) })
       for (const actor of this.actors) {
         if (meeting) {
           this.meetingMove(actor, time, delta)
@@ -399,9 +452,13 @@ export async function createOfficeRenderer(element, { floor, lobby = false, redu
         }
         const life = lives[actor.id], station = this.world.stations.find(s => s.id === life.stationId)
         actor.activity = life.activity; actor.stationId = life.stationId
-        const working = actor.state !== 'idle' && actor.state !== 'away'
+        const working = encounter.desk === actor.id || this.workOf(actor.id).desk || actor.state !== 'idle' && actor.state !== 'away'
         const homeDistance = Math.hypot(this.position(actor).x - actor.home.x, this.position(actor).y - actor.home.y)
-        if (life.goal) {
+        if (encounter.held === actor.id) {
+          this.stand(actor); actor.sprite.setVelocity(0); actor.path = []; actor.goal = null
+          actor.direction = facing(player.x - actor.sprite.x, player.y - actor.sprite.y)
+          this.player.direction = facing(actor.sprite.x - player.x, actor.sprite.y - player.y)
+        } else if (life.goal) {
           if (working && homeDistance <= 8) {
             if (!actor.exit) this.seat(actor, actor.home)
             actor.path = []; actor.goal = null; actor.direction = 'up'
@@ -411,8 +468,8 @@ export async function createOfficeRenderer(element, { floor, lobby = false, redu
             const goal = `${life.goal.x},${life.goal.y}`
             if (goal !== actor.goal || !actor.path.length && Math.hypot(actor.sprite.x - life.goal.x, actor.sprite.y - life.goal.y) > 4) actor.path = findPath(actor.sprite, life.goal, this.world)
             actor.goal = goal
-            if ((selected === actor.id || pending === actor.id) && actor.state === 'idle') actor.sprite.setVelocity(0)
-            else this.move(actor, actor.path, COWORKER_SPEED, delta)
+            if (pending === actor.id && actor.state === 'idle') actor.sprite.setVelocity(0)
+            else this.move(actor, actor.path, encounter.mode === 'escort' && encounter.id === actor.id ? WALK_SPEED : COWORKER_SPEED, delta)
           }
         } else {
           actor.path = []; actor.goal = null; actor.sprite.setVelocity(0)
@@ -452,6 +509,7 @@ export async function createOfficeRenderer(element, { floor, lobby = false, redu
     startMeeting() {
       if (!this.world.meeting || meeting) return
       this.endActivity()
+      this.encounter.clear(); escortPath = []; escortGoal = null
       meetingEntered = true
       meeting = { places: meetingPlaces(this.world, this.actors.map(a => a.id)), started: this.time.now, arrived: new Set(), entered: new Set(), zoom: this.view3d.cameraSnapshot().zoom }
       for (const actor of [this.player, ...this.actors]) { this.stand(actor); actor.path = []; actor.goal = null; actor.stationId = null; actor.sprite.setVelocity(0) }
@@ -505,6 +563,22 @@ export async function createOfficeRenderer(element, { floor, lobby = false, redu
       activity = null; this.stand(this.player); this.player.activity = 'idle'; this.player.stationId = null
       path = []; destination = null; this.marker?.clear(); this.player.sprite.setVelocity(0)
     }
+    setPhone(value) {
+      const holding = Boolean(value)
+      if (!this.player || this.player.holdingPhone === holding) return
+      this.player.holdingPhone = holding
+      if (!holding) return
+      this.endActivity()
+      this.stand(this.player)
+      path = []; destination = null; pending = null; this.marker.clear()
+      this.player.sprite.setVelocity(0)
+      this.player.direction = 'down'
+      this.player.activity = 'idle'
+    }
+    cancelInteraction() {
+      this.endActivity(); interactionStation = null; interactionTarget = null; pending = null
+      onCancelInteraction?.()
+    }
     updateActivity(time, delta) {
       if (!activity) return
       const station = this.world.stations.find(s => s.id === activity.stationId)
@@ -551,7 +625,9 @@ export async function createOfficeRenderer(element, { floor, lobby = false, redu
   const clearKeys = () => keys.clear()
   const down = event => {
     const key = event.key.toLowerCase()
+    if (!paused && ['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(key) && (activity || interactionTarget)) scene?.cancelInteraction()
     if (['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'shift', 'e', 'enter'].includes(key)) {
+      if (['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(key)) { scene?.encounter.interrupt(); escortPath = []; escortGoal = null }
       event.preventDefault(); event.stopPropagation(); keys.add(key)
       if ((key === 'e' || key === 'enter') && !event.repeat && nearby && !paused && !activity) scene?.interact(nearby)
     }
@@ -584,22 +660,48 @@ export async function createOfficeRenderer(element, { floor, lobby = false, redu
       currentRoom: room ? { id: room.id, name: room.name, kind: room.kind } : { id: 'corridor', name: 'Corridor', kind: 'corridor' },
       camera: { x: camera.scrollX, y: camera.scrollY, zoom: camera.zoom, width: scene.scale.width, height: scene.scale.height, mode: scene.cameraMode,
         viewport: { x: camera.x, y: camera.y, width: camera.width, height: camera.height }, visibleWorld: { left: start.x, top: start.y, right: end.x, bottom: end.y }, ...scene.view3d.cameraSnapshot() },
-      player: { x: scene.player.sprite.x, y: scene.player.sprite.y, direction: scene.player.direction, frame: scene.player.sprite.frame.name, seated: Boolean(scene.player.exit) }, nearby: nearby?.id, activity: activity ? { ...activity } : null,
+      player: { x: scene.player.sprite.x, y: scene.player.sprite.y, direction: scene.player.direction, frame: scene.player.sprite.frame.name, seated: Boolean(scene.player.exit), holdingPhone: Boolean(scene.player.holdingPhone) }, nearby: nearby?.id, activity: activity ? { ...activity } : null,
       meeting: meeting ? { arrived: [...meeting.arrived], entered: [...meeting.entered], places: meeting.places } : null,
+      encounter: { ...encounter },
       actors: scene.actors.map(a => ({ id: a.id, x: a.sprite.x, y: a.sprite.y, state: a.state, activity: a.activity, stationId: a.stationId, seated: Boolean(a.exit), direction: a.direction, presetId: a.presetId })),
       world: { ...scene.world, doors: scene.doors.map(d => ({ id: d.id, roomId: d.roomId, x: d.x, y: d.y, width: d.width, height: d.height, open: d.open })) }, canvasCount: element.querySelectorAll('canvas').length }
   }
   element.__officeDebug = { snapshot, project: (x, y, height) => scene.view3d.project(x, y, height) }
   return {
-    select(id) { selected = id },
+    select(id) {
+      selected = id
+      scene.encounter.select(id, scene.coworkers(), scene.position(scene.player), scene.time.now)
+      escortPath = []; escortGoal = null
+    },
     startMeeting() { if (!disposed) scene.startMeeting() },
     endMeeting() { if (!disposed) scene.endMeeting() },
-    say(id, text) { if (!disposed) speech.set(id, { text: meetingCaption(text), until: scene.time.now + 12000 }) },
+    say(id, text) {
+      if (disposed || !id) return
+      const caption = meetingCaption(text, 40)
+      if (caption) {
+        speech.set(id, { text: caption, until: scene.time.now + 12000 })
+        if (id === selected && !meeting) speech.delete('studio-visitor')
+      }
+    },
+    work(id, value) {
+      if (disposed) return
+      if (!work.has(id)) work.set(id, new Map())
+      work.get(id).set(value.sessionId ?? id, value)
+      if (value.recentDesk) scene.encounter.requireDesk(id)
+    },
+    resetWork() { work.clear() },
     liftAnchor() { const p = scene.world.elevator.center; return scene.view3d.project(p.x, p.y, 30) },
     setLiftTravel(state) { scene.liftTravel = state },
     leaveLift() { if (!disposed) { scene.liftTravel = null; liftLatched = true; scene.followPlayer(); scene.go(scene.world.elevator.exit) } },
     approach(id) { const target = scene.targets().find(t => t.id === id); if (target) scene.approach(target) },
-    setPaused(value) { paused = value; if (value) clearKeys(); else interactionStation = null },
+    setPaused(value) { paused = value; if (value) clearKeys() },
+    setPhone(value) { if (!disposed) scene?.setPhone(value) },
+    nearbyInteraction() {
+      if (disposed || paused || activity || interactionTarget || !nearby) return null
+      return { id: nearby.id, label: nearby.label, anchor: scene.view3d.project(nearby.x, nearby.y, 24) }
+    },
+    activateNearby() { if (!disposed && !paused && !activity && !interactionTarget && nearby) { element.focus({ preventScroll: true }); scene.interact(nearby) } },
+    interruptActivity(key) { if (disposed || key && paused) return; scene.cancelInteraction(); if (key) keys.add(key); element.focus({ preventScroll: true }) },
     panTo(x, y) { if (!disposed) scene.panTo(x, y) }, followPlayer() { if (!disposed) scene.followPlayer() },
     zoomBy(factor) { if (!disposed) scene.view3d.zoomBy(factor) },
     rotateView() { if (!disposed) scene.view3d.rotate() },

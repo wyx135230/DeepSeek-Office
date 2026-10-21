@@ -4,8 +4,8 @@ import { FishLogo } from '@deepseek-ai/dsh-client-ui-primitives'
 import { isMainOf } from './sources.js'
 import { currentPart, previewOf, relativeShort } from './text.js'
 import { PlusIcon, SearchIcon, SidebarIcon, GaugeIcon, PlugIcon, ClockIcon, GearIcon, PinMarkIcon, ConnectorIcon, SwitchIcon, CloudDownloadIcon } from './icons.js'
-import { MAIN_LOOK } from './characters.js'
-import { botState, BotMark, BotAvatar, RoomAvatar } from './mark.js'
+import { botState, BotAvatar, RoomAvatar } from './mark.js'
+import { OfficeLogo, SidebarPortrait, SIDEBAR_ART_CSS } from './sidebar-art.js'
 import { reducedMotion } from './activity-row.js'
 import { Shimmer, workPhrase } from './cells.js'
 import { springEasing, SPRING_SHAPE } from './motion.js'
@@ -74,7 +74,7 @@ function BotRow({ bot, roster, actions, useSessions, useSessionStatus, useSessio
       type: 'button', className: 'bt-tile', 'aria-label': label, 'aria-current': active ? 'page' : undefined,
       'data-bot-id': id, title: preview || bot.name, onClick: () => actions.openSession(id), onContextMenu,
     },
-    h(BotAvatar, { bot, size: 60, state, main: true }),
+    h(BotAvatar, { bot, size: 60, state, main: true, portrait: SidebarPortrait }),
     h('span', { className: 'bt-tile-name' }, bot.name),
     bot.role ? h('span', { className: 'bt-chip' }, bot.role) : null))
   }
@@ -82,7 +82,7 @@ function BotRow({ bot, roster, actions, useSessions, useSessionStatus, useSessio
     type: 'button', className: 'bt-row', 'aria-label': label, 'aria-current': active ? 'page' : undefined,
     'data-bot-id': id, title: wide ? undefined : bot.name, onClick: () => actions.openSession(id), onContextMenu,
   },
-  h(BotAvatar, { bot, size: 36, state, main }),
+  h(BotAvatar, { bot, size: 36, state, main, portrait: SidebarPortrait }),
   pinned && !wide ? h(PinMark) : null,
   wide ? h('span', { className: 'bt-row-body' },
     h('span', { className: 'bt-row-name' }, h('span', { className: 'bt-row-title' }, bot.name), pinned ? h(PinMark) : null),
@@ -111,7 +111,7 @@ function RoomRow({ room, roster, actions, useSessions, useSessionStatus, useSess
     'data-room-id': id, onClick: () => actions.openSession(id),
     onContextMenu: (event) => { event.preventDefault(); actions.openMenu({ kind: 'room', id, x: event.clientX, y: event.clientY }) },
   },
-  h(RoomAvatar, { room, roster, size: 36 }),
+  h(RoomAvatar, { room, roster, size: 36, portrait: SidebarPortrait }),
   pinned && !wide ? h(PinMark) : null,
   wide ? h('span', { className: 'bt-row-body' },
     h('span', { className: 'bt-row-name' }, h('span', { className: 'bt-row-title' }, room.name), pinned ? h(PinMark) : null),
@@ -418,7 +418,7 @@ export function ConnectPlugins({ wide, actions }) {
 // Account seat of the Settings trigger: the visible label stays for assistive tech only.
 export function YouAvatar() {
   return h('span', { className: 'bt-you-wrap' },
-    h('span', { className: 'bt-you', 'aria-hidden': true }, h(BotMark, { look: MAIN_LOOK, size: 24 })),
+    h('span', { className: 'bt-you', 'aria-hidden': true }, h(OfficeLogo, { size: 24 })),
     h('span', { style: { position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0 0 0 0)' } }, t('Settings')))
 }
 
@@ -532,7 +532,7 @@ export function AccountLauncher({ seat = true, settingsOpen, openSettings, openO
   ]
   return h(Fragment, null,
     h('button', { ref: button, type: 'button', className: 'bt-account', 'aria-label': t('Account'), 'aria-haspopup': 'menu', 'aria-expanded': open, onClick: toggle },
-      h('span', { className: 'bt-you', 'aria-hidden': true }, h(BotMark, { look: MAIN_LOOK, size: 24 }))),
+      h('span', { className: 'bt-you', 'aria-hidden': true }, h(OfficeLogo, { size: 24 }))),
     open && box ? createPortal(h('div', { className: 'bt-menu bt-menu-up bt-account-menu', role: 'menu', 'aria-label': t('Account'), style: box },
       groups.map((group, index) => h(Fragment, { key: index },
         index > 0 ? h('div', { className: 'bt-menu-sep', role: 'separator' }) : null,
@@ -584,7 +584,7 @@ export function BotReturn({ wide, useSurface, actions }) {
   const mode = useSurface(value => value.mode)
   if (mode !== 'agent') return null
   return h('button', { type: 'button', className: 'bt-return', 'aria-label': t('DS Bot'), title: t('DS Bot'), onClick: () => actions.setSurface('bot') },
-    h(BotMark, { look: MAIN_LOOK, size: 20 }),
+    h(OfficeLogo, { size: 20 }),
     wide ? h('span', { className: 'bt-return-name' }, t('DS Bot')) : null)
 }
 
@@ -601,16 +601,16 @@ export const RETURN_CSS = `
 `
 
 export function BrandMark({ size = 24 }) {
-  return h('span', { className: 'bt-brand-whale' }, h(BotMark, { look: MAIN_LOOK, size }))
+  return h('span', { className: 'bt-brand-office' }, h(OfficeLogo, { size }))
 }
 export function BrandName() {
   return h('span', { style: { fontWeight: 600, fontSize: 14 } }, 'DS Bot')
 }
 
-// With the whale holding the settings seat, the Bot row is just the account menu
+// With the office mark holding the settings seat, the Bot row is just the account menu
 // and Connect plugins; FooterAccount only shows when the seat went to no one. The
 // shell's footer classes are CSS-module names, so they match on their stems.
-export const SIDEBAR_CSS = `
+export const SIDEBAR_CSS = SIDEBAR_ART_CSS + `
 .bt-side-top .bt-brand{cursor:default;padding-left:6px}
 .bt-side-top .bt-brand:hover{background:none}
 .bt-brand .bt-mark{flex:none}

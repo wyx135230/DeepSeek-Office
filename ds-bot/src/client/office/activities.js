@@ -1,6 +1,7 @@
 import { createElement as h, useEffect, useRef, useState } from 'react'
 import { createStarRound, moveStarCatcher, tickStarRound, STAR_LANES, STAR_ROUND_MS } from '../../shared/office/arcade.js'
 import { MEAL_INGREDIENTS, DRINK_STEPS, EXERCISE_REPS, FACILITY_WINDOW, facilityBeat, inFacilityWindow, addMealIngredient } from '../../shared/office/facilities.js'
+import { activityKey } from './activity-input.js'
 
 const BOOKS = [
   { title: 'The window garden', author: 'A studio short story', color: '#6a8060', pages: [
@@ -27,29 +28,22 @@ function bestScore(roomId) {
   } catch { return 0 }
 }
 
-function CoffeeBreak({ sceneApi }) {
-  const [started, setStarted] = useState(false)
+function SimpleBreak({ kind, sceneApi }) {
   const [activity, setActivity] = useState(null)
   const [error, setError] = useState('')
   useEffect(() => {
-    if (!started) return undefined
+    try { sceneApi.current?.beginActivity?.(kind) } catch (failure) { setError(failure.message) }
     const poll = () => setActivity(sceneApi.current?.activity?.() ?? null)
     poll()
     const timer = window.setInterval(poll, 200)
     return () => window.clearInterval(timer)
-  }, [started, sceneApi])
+  }, [kind, sceneApi])
   const complete = activity?.complete || activity?.phase === 'complete'
   const progress = Math.max(0, Math.min(1, Number(activity?.progress) || 0))
-  return h('div', { className: 'of-coffee-break' },
-    h('p', { className: 'of-muted' }, 'A fresh cup and a moment away from your desk.'),
-    h('div', { className: 'of-coffee-visual', 'aria-hidden': true }, h('span', { className: `of-cup${started ? ' is-brewing' : ''}` }, h('i', { style: { height: `${started ? 16 + progress * 58 : 0}%` } })), h('span', null, complete ? 'Enjoy your coffee.' : started ? 'Making a little time for yourself.' : 'The kettle is ready.')),
-    started ? h('div', { className: 'of-brew-status' },
-      h('progress', { max: 1, value: progress, 'aria-label': 'Coffee break progress' }),
-      h('p', { role: 'status' }, complete ? 'All done. Feeling refreshed?' : activity?.label || 'Preparing your coffee…')) : null,
-    error ? h('p', { role: 'alert', className: 'of-error' }, error) : null,
-    h('button', { type: 'button', className: 'of-button of-primary', disabled: started && !complete, onClick: () => {
-      try { sceneApi.current?.endActivity?.(); sceneApi.current?.beginActivity?.('coffee'); setActivity(null); setStarted(true); setError('') } catch (failure) { setError(failure.message) }
-    } }, complete ? 'Make another cup' : started ? 'Brewing…' : 'Brew a cup'))
+  return h('div', { className: 'of-simple-break' },
+    h('div', { className: 'of-simple-status', role: 'status' }, h('i', { 'aria-hidden': true }), h('span', null, complete ? 'Refreshed and ready.' : activity?.label || 'Finding a comfortable spot…')),
+    kind === 'coffee' ? h('progress', { max: 1, value: progress, 'aria-label': 'Coffee break progress' }) : null,
+    error ? h('p', { role: 'alert', className: 'of-error' }, error) : null)
 }
 
 function ReadingBreak({ sceneApi }) {
@@ -145,7 +139,7 @@ function MealBreak({ sceneApi }) {
     h('div', { className: 'of-lunch-bowl', 'aria-label': `Bowl: ${ingredients.join(', ') || 'empty'}` },
       h('div', { className: 'of-bowl-ingredients' }, ingredients.map(ingredient => h('span', { key: ingredient, 'data-ingredient': ingredient }, ingredient))), h('div', { className: 'of-bowl-base', 'aria-hidden': true })),
     h('p', { className: 'of-facility-feedback', role: 'status' }, feedback),
-    phase === 'preparing' ? h('div', { className: 'of-ingredient-controls' }, ['Tofu', 'Rice', 'Greens'].map(ingredient => h('button', { type: 'button', key: ingredient, className: 'of-button', disabled: ingredients.includes(ingredient), onClick: () => add(ingredient) }, `Add ${ingredient.toLowerCase()}`))) : null,
+    phase === 'preparing' ? h('div', { className: 'of-ingredient-controls' }, MEAL_INGREDIENTS.map((ingredient, index) => h('button', { type: 'button', key: ingredient, className: 'of-button', disabled: ingredients.includes(ingredient), onClick: () => add(ingredient) }, `${index + 1}. Add ${ingredient.toLowerCase()}`))) : null,
     phase === 'serving' ? h('progress', { className: 'of-facility-progress', max: 1, value: progress, 'aria-label': 'Serving lunch' }) : null,
     phase === 'ready' || phase === 'complete' ? h('button', { type: 'button', className: 'of-button of-primary', onClick: start }, phase === 'complete' ? 'Make another bowl' : 'Prepare lunch') : null,
     phase === 'preparing' && ingredients.length === 3 ? h('button', { type: 'button', className: 'of-button of-primary', onClick: () => { setPhase('serving'); setFeedback('Serving your lunch…') } }, 'Serve the bowl') : null)
@@ -219,21 +213,45 @@ function ExerciseBreak({ sceneApi }) {
     : h('button', { type: 'button', className: 'of-button of-primary', onClick: stretch }, 'Stretch'))
 }
 
-export function OfficeActivity({ interaction, roomId, sceneApi, onClose }) {
+export function OfficeActivity({ interaction, roomId, sceneApi, onClose, active = true }) {
   const panel = useRef(null)
   const kind = interaction.kind
-  const title = { rest: 'A comfortable break', coffee: 'Coffee break', reading: 'The reading nook', arcade: 'Arcade corner', meal: 'The lunch counter', drink: 'The mocktail bar', exercise: 'A stretch break' }[kind]
+  const simple = ['rest', 'coffee'].includes(kind)
+  const title = { rest: 'Taking a break', coffee: 'Coffee break', reading: 'The reading nook', arcade: 'Arcade corner', meal: 'The lunch counter', drink: 'The mocktail bar', exercise: 'A stretch break' }[kind]
   useEffect(() => {
     const scene = sceneApi.current
-    panel.current?.querySelector('button')?.focus()
-    return () => { scene?.endActivity?.() }
+    return () => { if (scene?.activity?.()?.kind === kind) scene.endActivity?.() }
   }, [sceneApi])
-  return h('section', { ref: panel, className: `of-activity-panel of-activity-${kind}`, role: 'dialog', 'aria-modal': true, 'aria-label': title, onKeyDown: event => {
-    if (event.key !== 'Tab') return
-    const controls = [...panel.current.querySelectorAll('button:not(:disabled), [tabindex="0"]')]
-    const first = controls[0], last = controls.at(-1)
-    if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus() }
-    else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus() }
-  } }, h('div', { className: 'of-section-heading' }, h('h2', null, title), h('button', { type: 'button', className: 'of-text-button', onClick: onClose }, 'Close')),
-  kind === 'rest' ? h('div', null, h('p', { className: 'of-muted' }, 'Settle in for a moment. Close this panel to stand up.'), h('button', { type: 'button', className: 'of-button of-primary', onClick: () => sceneApi.current?.beginActivity('rest') }, 'Sit down')) : kind === 'coffee' ? h(CoffeeBreak, { sceneApi }) : kind === 'reading' ? h(ReadingBreak, { sceneApi }) : kind === 'meal' ? h(MealBreak, { sceneApi }) : kind === 'drink' ? h(DrinkBreak, { sceneApi }) : kind === 'exercise' ? h(ExerciseBreak, { sceneApi }) : h(StarArcade, { sceneApi, roomId }))
+  useEffect(() => {
+    if (!active) return undefined
+    const body = () => panel.current?.querySelector('.of-activity-body')
+    if (simple) document.querySelector('.of-scene')?.focus({ preventScroll: true })
+    else body()?.querySelector('button:not(:disabled)')?.focus({ preventScroll: true })
+    const keydown = event => {
+      const target = event.target, workspace = panel.current?.closest('.of-workspace')
+      if (!workspace?.contains(target) || target.closest('.of-hud,.of-talk-chat,.of-hud-drawer')) return
+      const action = activityKey(kind, event.key, { repeat: event.repeat, editing: Boolean(target.closest('input,textarea,[contenteditable="true"]')) })
+      if (!action) return
+      event.preventDefault(); event.stopPropagation()
+      if (action === 'move') { sceneApi.current?.interruptActivity?.(event.key.toLowerCase()); return }
+      if (action === 'leave') { onClose(); return }
+      if (action.startsWith('lane-')) { body()?.querySelector(`.of-arcade-controls button:${action === 'lane-left' ? 'first' : 'last'}-child:not(:disabled)`)?.click(); return }
+      const choose = control => { if (!control || control.disabled) return; control.click(); panel.current?.focus({ preventScroll: true }) }
+      const controls = [...(body()?.querySelectorAll('button:not(:disabled)') ?? [])]
+      const focused = controls.find(control => control === document.activeElement)
+      if (action.startsWith('focus-')) {
+        const index = controls.indexOf(focused), direction = action === 'focus-next' ? 1 : -1
+        controls[(index + direction + controls.length) % controls.length]?.focus({ preventScroll: true })
+      } else if (action === 'previous' || action === 'next') choose(body()?.querySelector(`.of-page-navigation button:${action === 'previous' ? 'first' : 'last'}-child:not(:disabled)`))
+      else if (action.startsWith('choice-')) choose(body()?.querySelectorAll('.of-book-choice,.of-ingredient-controls button')[Number(action.slice(-1)) - 1])
+      else choose(focused ?? body()?.querySelector('.of-primary:not(:disabled)') ?? (kind === 'arcade' ? null : controls[0]))
+    }
+    window.addEventListener('keydown', keydown, true)
+    return () => window.removeEventListener('keydown', keydown, true)
+  }, [active, kind, sceneApi])
+  const keys = simple ? [['E / Esc', 'Leave'], ['WASD / arrows', 'Walk away']] : kind === 'arcade' ? [['E', 'Play'], ['A D / ← →', 'Catch'], ['W / S / Esc', 'Leave']] : kind === 'reading' ? [['E / 1–3', 'Choose'], ['← →', 'Pages'], ['WASD / Esc', 'Leave']] : [['E / Space', 'Action'], ...(kind === 'meal' ? [['1–3', 'Ingredients']] : []), ['WASD / Esc', 'Leave']]
+  return h('section', { ref: panel, className: `of-activity-panel of-activity-${kind}`, tabIndex: -1, role: 'region', 'aria-label': title, onClickCapture: () => requestAnimationFrame(() => { if (active && document.activeElement === document.body) panel.current?.focus({ preventScroll: true }) }) },
+    h('div', { className: 'of-section-heading' }, h('h2', null, title), h('button', { type: 'button', className: 'of-text-button', onClick: onClose, 'aria-label': 'Leave activity' }, simple ? 'Leave ×' : 'Close ×')),
+    h('div', { className: 'of-activity-body' }, simple ? h(SimpleBreak, { kind, sceneApi }) : kind === 'reading' ? h(ReadingBreak, { sceneApi }) : kind === 'meal' ? h(MealBreak, { sceneApi }) : kind === 'drink' ? h(DrinkBreak, { sceneApi }) : kind === 'exercise' ? h(ExerciseBreak, { sceneApi }) : h(StarArcade, { sceneApi, roomId })),
+    h('footer', { className: 'of-activity-keys' }, keys.map(([key, label]) => h('span', { key }, h('kbd', null, key), ` ${label}`))))
 }

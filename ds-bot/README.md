@@ -2,7 +2,7 @@
 
 The DeepSeek Office plugin, based on DS Bot, for [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) (dsh). It turns dsh into a team of long-lived Bots that talk to you, to each other and in group chats. See the [project page](../README.md) for an overview, install steps and screenshots.
 
-> Version 0.6.1 adds a screening room on every floor, with the supplied curved TV and six three-person sofas, preserving the existing rooms and native group conversations. The screen currently shows a static cinema illustration. Features, tools and the saved data format can still change.
+> Version 0.7.0 brings in-scene phone chat and web reading, illustrated face-to-face dialogue, compact navigation and activity controls, an updated character model, and warmer details in work studios, coffee studios and screening rooms. Conversations still use the existing Harness Sessions and native composer. The screening-room TV remains a static display. Features, tools and the saved data format can still change.
 
 The office uses a bundled Three.js orthographic view over the existing Phaser
 simulation. Camera rotation, zoom, overview, screen-relative movement and the
@@ -11,7 +11,8 @@ Architecture is original and procedural; the worker is derived from the owner's
 supplied generated GLB. All resources are bundled locally. The wardrobe combines
 skin, hair, shirt, trouser and shoe colors and saves each identity in browser
 storage. A background AI portrait does not overwrite these choices; an explicit
-user direction can. Body shape and clothing geometry currently share one model.
+user direction can. Characters share the supplied long-haired model with a jacket,
+skirt and boots; the existing trouser-color channel colors the skirt.
 See the [character checks](../docs/office-character-verification.md) and the
 [design](../docs/plans/2026-10-19-isometric-office.md) and
 [verification](../docs/office-25d-verification.md).
@@ -61,15 +62,23 @@ checks use an isolated Web profile on Windows; see the linked verification recor
 
 ## Install
 
-Install the local `deepseek-office-0.6.1.tgz` build using DSH's Plugins page or `dsh plugin --profile web add /absolute/path/deepseek-office-0.6.1.tgz`. Disable the original `ds-bot` / legacy `dsh-bot` plugin in that profile first; both variants share the internal Bot identity. Keep your data. See the [project install guide](../README.md#quick-start). Installing by the `deepseek-office` package name requires that an owner has published it to the selected npm registry.
+Install the local `deepseek-office-0.7.0.tgz` build using DSH's Plugins page or `dsh plugin --profile web add /absolute/path/deepseek-office-0.7.0.tgz`. Disable the original `ds-bot` / legacy `dsh-bot` plugin in that profile first; both variants share the internal Bot identity. Keep your data. To update DeepSeek Office, install the new package in the same profile and restart Harness, keeping the same `DSH_HOME`. See the [project install guide](../README.md#quick-start). Installing by the `deepseek-office` package name requires that an owner has published it to the selected npm registry.
 
 ## 2.5D offices
 
 Each group becomes one office floor. The lobby lists the team's offices; members own workstations and show real activity. Use click-to-walk, WASD/arrows and E to interact, or use the accessible member list. Chat uses the same send actions as the original interface. No groups means no office entry, canvas or automatic generation.
 
-Version 0.6.1 uses Three.js 0.186.1 for an orthographic 3D view and Phaser 4.2.1 for movement and simulation. Animated coworkers use the supplied rigged model with independently assigned skin, hair and clothing colors. Every four employees occupy one work room; members five and nine add connected work rooms. Each group floor reserves one meeting room, two seeded leisure facilities and a screening room in the east wing. Reception has its own welcome studio and three leisure facilities, plus a screening room. Unused room slots become gardens. Walls and furniture have physical footprints, automatic doors connect rooms to the corridor, and the map supports room inspection and camera following.
+Version 0.7.0 uses Three.js 0.186.1 for an orthographic 3D view and Phaser 4.2.1 for movement and simulation. Animated coworkers use the supplied rigged model with independently assigned skin, hair and clothing colors. Every four employees occupy one work room; members five and nine add connected work rooms. Each group floor reserves one meeting room, two seeded leisure facilities and a screening room in the east wing. Reception has its own welcome studio and three leisure facilities, plus a screening room. Unused room slots become gardens. Walls and furniture have physical footprints, automatic doors connect rooms to the corridor, and the map supports room inspection and camera following.
 
-Facilities support brewing, seated page turns, a scored 30-second arcade round, lunch assembly, timed mocktail mixing and a six-stretch rhythm activity. Coworkers reserve reachable break spots and use individual sofa seats; real Harness work preempts leisure. Closing a panel cancels its activity. Quiet motion pauses autonomous movement and reduces ambient effects. Sunlight and evening lighting follow local time. The modern game HUD provides a room map, camera rotation, zoom, overview and follow controls; all game interface text is English.
+Work studios now include desk pads, stationery, lamps or headphones, cable trays, corkboards and rugs. Coffee studios add cup shelves, bean jars, saucers and botanical prints. Screening rooms add acoustic panels, a wall light, backrest fabric and television cabinet vents. These original procedural details fit existing furniture and wall footprints; they preserve the UI, paths, seats, interaction targets and agent behavior. Other leisure facilities retain their existing furnishings. See the [decoration scope](../docs/plans/2026-10-21-office-decoration.md).
+
+Facilities support brewing, seated page turns, a scored 30-second arcade round, lunch assembly, timed mocktail mixing and a six-stretch rhythm activity. Nearby prompts and compact activity cards show the available interaction and keyboard controls. Coworkers reserve reachable break spots and use individual sofa seats; real Harness work preempts leisure. Closing a panel cancels its activity. Quiet motion pauses autonomous movement and reduces ambient effects. Sunlight and evening lighting follow local time. The upper-right HUD provides a room map, camera rotation, zoom, overview, follow, Floors and Team; More holds decoration, Quiet motion and help. Face-to-face conversations use illustrated portraits and message-history controls, with private chat or a group mention through the native composer. All game interface text is English.
+
+While exploring, take out the phone with the **Phone** button below the HUD map or the `P` key. The character holds it, its screen appears in the bottom-right corner, and `Esc` puts it away. The chat app lists every group and teammate, with search, unread marks and recent-message previews. Conversations use the same Sessions and native composer as ordinary chat, including attachments, voice, models, queues, questions, mentions and slash commands.
+
+The **Browser** app has an address bar, back, forward, reload and a menu. The plugin host fetches pages using a phone user agent, the network and system proxy of the computer running DSH, then shows them in a sandboxed mobile layout without access to DSH. Pages requiring sign-in, form submission or complex scripts can be opened in the system browser.
+
+The player pauses while holding the phone; the world, agent turns and scene activity continue. Simple questions can be answered on the spot; an agent that needs a workstation goes there while the player stays put. See the [phone design](../docs/plans/2026-10-21-office-phone.md).
 
 Licenses, pinned sources and asset manifests are retained under `src/client/assets/`. Architecture and furnishings are procedural; characters, the lift and TV use owner-supplied models with source records in `office-worker/`, `elevator/` and `cinema/`. Momo retains its separately credited CC0 sprite. Older LPC resources keep their existing licenses and credits. The new project logo and its generation prompt are recorded in [brand sources](../docs/branding/SOURCES.md).
 

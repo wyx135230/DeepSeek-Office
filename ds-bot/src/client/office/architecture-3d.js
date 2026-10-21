@@ -2,11 +2,12 @@ import * as THREE from 'three'
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
 import { ARCH, makePlant } from './model-kit.js'
 import { createFurnitureModels } from './furniture-3d.js'
+import { buildOfficeDetails } from './decoration-3d.js'
 import { officeRoomSlot } from '../../shared/office/world.js'
 
 export function buildArchitecture(kit, scene, world, theme) {
   const root = kit.group(scene), walls = [], doors = [], roots = [root], furniture = createFurnitureModels(kit)
-  const floorMaps = new Map()
+  const floorMaps = new Map(), wallMounts = new Map()
   const floorMaterial = kind => {
     const carpet = ['work', 'library', 'arcade'].includes(kind)
     const key = carpet ? 'carpet' : kind === 'corridor' ? 'stone' : 'oak'
@@ -88,6 +89,7 @@ export function buildArchitecture(kit, scene, world, theme) {
     const horizontal = wall.width > wall.height
     const wallRoot = kit.group(scene, wall.x + wall.width / 2, 0, wall.y + wall.height / 2)
     roots.push(wallRoot)
+    wallMounts.set(wall.id, wallRoot)
     kit.box(wallRoot, 0, 5, 0, wall.width, 10, wall.height, theme.wall ?? ARCH.chalk, .5)
     if (room) {
       const glass = kit.material('#b9d1d4', { transparent: true, opacity: .17, roughness: .18, metalness: .1, depthWrite: false })
@@ -123,19 +125,22 @@ export function buildArchitecture(kit, scene, world, theme) {
     kit.box(root, x + 80, 13, z + 112, 64, 12, 3, ARCH.oak, 1)
     title('Terrace garden', x + 213, z + 140, 95)
   }
-  return { root, walls, doors, dispose() { for (const object of roots) object.removeFromParent() } }
+  const detailRoots = buildOfficeDetails(kit, root, world, wallMounts)
+  return { root, walls, doors, detailRoots, dispose() { for (const object of roots) object.removeFromParent() } }
 }
 
 // Static detail shares draw calls; interaction proxies live outside this batch.
 export function batchArchitecture(root) {
-  root.updateMatrixWorld(true)
+  root.updateWorldMatrix(true, true)
+  const inverse = root.matrixWorld.clone().invert()
   const batches = new Map(), originals = []
   root.traverse(object => {
     if (!object.isMesh || object.material.transparent) return
     const key = `${object.material.uuid}:${object.castShadow}`
     if (!batches.has(key)) batches.set(key, { material: object.material, shadow: object.castShadow, geometries: [] })
     const shape = object.geometry.index ? object.geometry.toNonIndexed() : object.geometry.clone()
-    shape.applyMatrix4(object.matrixWorld)
+    // A wall detail root retains its parent transform for camera cutaways.
+    shape.applyMatrix4(inverse.clone().multiply(object.matrixWorld))
     batches.get(key).geometries.push(shape); originals.push(object)
   })
   const merged = []

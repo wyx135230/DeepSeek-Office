@@ -1,6 +1,11 @@
 import { MODERN_OFFICE_CSS } from './modern-styles.js'
 import { ELEVATOR_CSS } from './elevator-ui.js'
 import { MEETING_CSS } from './conversation.js'
+import { HUD_CSS } from './hud-styles.js'
+import { ACTIVITY_CSS } from './activity-ui.js'
+import { PHONE_CSS } from './phone-styles.js'
+import { PHONE_CHAT_CSS } from './phone-chat.js'
+import { PHONE_BROWSER_CSS } from './phone-browser.js'
 
 export const OFFICE_CSS = `
 .of-entry{display:flex;align-items:center;gap:12px;min-height:46px;margin:6px 8px 10px;padding:8px 12px;border:2px solid #4f3626;background:linear-gradient(#f8efd8,#f0e1c0);color:#3f3328;border-radius:6px;box-shadow:inset 0 2px 0 #fff8e6,0 3px 0 #33241a;font:inherit;font-size:14px;cursor:pointer;text-align:left}
@@ -43,4 +48,11 @@ export const OFFICE_CSS = `
 @media(max-width:1100px){.of-game-top,.of-game-bottom{gap:14px}.of-location-card h1{font-size:19px}.of-game-nav .of-button{padding:6px 10px}.of-game-options{gap:8px}.of-game-hint{max-width:50%}.of-game-clock{display:none}.of-game-dialogue{grid-template-columns:1fr;width:560px}.of-game-dialogue .of-composer{border-left:0;border-top:2px dashed #d3bf99;padding:16px 0 0}}
 @media(max-height:720px){.of-game-top{min-height:66px}.of-map-rail,.of-activity-panel{top:100px}.of-game-drawer{top:100px}.of-game-dialogue{bottom:76px}}
 .of-workspace[data-quiet] .of-book-page{animation:none}@media(prefers-reduced-motion:reduce){.of-workspace *,.of-entry{transition:none!important;animation:none!important}}
-` + MODERN_OFFICE_CSS + ELEVATOR_CSS + MEETING_CSS
+` + MODERN_OFFICE_CSS + ELEVATOR_CSS + MEETING_CSS + HUD_CSS + ACTIVITY_CSS + PHONE_CSS + PHONE_CHAT_CSS + PHONE_BROWSER_CSS + `
+.of-modern .of-phone-scrim{position:absolute;inset:0;z-index:29;background:#263e4b24;animation:of-phone-scrim-in .18s ease both}
+.of-modern[data-phone-open] .of-hud{opacity:.34;transition:opacity .18s ease}
+.of-modern[data-phone-open] .of-hud,.of-modern[data-phone-open] .of-camera-tools,.of-modern[data-phone-open] .of-context-hint,.of-modern[data-phone-open] .of-nearby-prompt,.of-modern[data-phone-open] .of-welcome-card{pointer-events:none!important}
+.of-modern[data-phone-open] .of-camera-tools,.of-modern[data-phone-open] .of-context-hint,.of-modern[data-phone-open] .of-nearby-prompt,.of-modern[data-phone-open] .of-welcome-card,.of-modern[data-phone-open] .of-talk-wrap{visibility:hidden!important;opacity:0!important}
+@keyframes of-phone-scrim-in{from{opacity:0}to{opacity:1}}
+@media(prefers-reduced-motion:reduce){.of-modern .of-phone-scrim{animation:none}.of-modern[data-phone-open] .of-hud{transition:none}}
+`

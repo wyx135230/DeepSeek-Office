@@ -59,6 +59,23 @@ test('every real work state immediately preempts leisure and releases its statio
   }
 })
 
+test('an engaged coworker stays in conversation through speech and online work, releasing its leisure reservation', () => {
+  const life = createOfficeLife({ stations: [coffee] })
+  const a = agent(), b = agent('b', 0, 200)
+  startTrip(life, [a])
+  a.x = 70
+  for (const state of ['idle', 'thinking', 'reading', 'speaking', 'away', 'waiting']) {
+    a.state = state
+    const held = life.step(6000, [a, b], { held: ['a'] }).a
+    assert.equal(held.goal, null, state)
+    assert.equal(held.activity, 'chatting', state)
+    assert.equal(held.stationId, null, state)
+    assert.equal(held.line, null, state)
+  }
+  a.state = 'typing'
+  assert.deepEqual(life.step(6100, [a], { held: [] }).a.goal, a.home)
+})
+
 test('quiet mode holds idle actors still and keeps real work home goals', () => {
   const life = createOfficeLife({ stations: [coffee] })
   const a = agent(), b = { ...agent('b', 0, 200), state: 'thinking' }

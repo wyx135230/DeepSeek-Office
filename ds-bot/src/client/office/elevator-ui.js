@@ -8,7 +8,7 @@ export function useOfficeElevator({ building, currentId, quiet, actions, sceneAp
   const makeController = () => createElevatorJourney({
     floors: () => [{ id: 'lobby', number: 0, name: 'Reception & lounge' }, ...latest.current.building.floors],
     current: () => latest.current.currentId, quiet: () => latest.current.quiet,
-    navigate: id => latest.current.actions.openOffice(id === 'lobby' ? null : id),
+    navigate: id => latest.current.actions.navigateOffice(id === 'lobby' ? null : id),
     change: state => { setTravel(state); latest.current.sceneApi.current?.setLiftTravel(state) },
     complete: () => { setOpen(false); latest.current.sceneApi.current?.leaveLift(); document.querySelector('.of-scene')?.focus({ preventScroll: true }) },
   })

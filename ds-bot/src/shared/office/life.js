@@ -75,7 +75,7 @@ export function createOfficeLife(world) {
     return byId
   }
 
-  return { step(now, agents, { quiet = false, reserved = [] } = {}) {
+  return { step(now, agents, { quiet = false, reserved = [], held = [] } = {}) {
     const active = new Set(agents.map(agent => agent.id))
     for (const id of records.keys()) if (!active.has(id)) records.delete(id)
     const ordered = [...agents].sort((a, b) => String(a.id).localeCompare(String(b.id)))
@@ -87,13 +87,17 @@ export function createOfficeLife(world) {
         rest(record, now)
         records.set(agent.id, record)
       }
-      if (agent.state !== 'idle') {
+      if (held.includes(agent.id)) {
+        record.phase = 'conversation'
+        record.station = null
+        record.goal = null
+      } else if (agent.state !== 'idle') {
         record.phase = 'work'
         record.station = null
         record.goal = point(agent.home)
       } else if (quiet) {
         rest(record, now)
-      } else if (record.phase === 'work') {
+      } else if (record.phase === 'work' || record.phase === 'conversation') {
         goHome(record, agent, now)
       } else if (record.station && claimed.has(record.station.id)) {
         goHome(record, agent, now)
@@ -106,7 +110,7 @@ export function createOfficeLife(world) {
     for (const agent of ordered) {
       const record = records.get(agent.id)
       const chatting = pair?.ids.includes(agent.id)
-      if (agent.state === 'idle' && !quiet && !chatting) {
+      if (agent.state === 'idle' && !quiet && !chatting && !held.includes(agent.id)) {
         if (record.phase === 'outbound' || record.phase === 'returning') {
           if (distance(agent, record.goal) <= ARRIVAL) {
             if (record.phase === 'outbound') {
@@ -139,6 +143,7 @@ export function createOfficeLife(world) {
         }
       }
       result[agent.id] = output(record, agent)
+      if (held.includes(agent.id)) result[agent.id].activity = 'chatting'
       if (chatting) {
         const first = agent.id === pair.ids[0]
         const other = byId.get(pair.ids[first ? 1 : 0])

@@ -29,6 +29,21 @@ function runtime(replies = []) {
   return { rt, bot, room, requests, saved: () => saved }
 }
 
+test('office presence exposes only current member sessions and existing rounds without writes or model calls', async () => {
+  const { rt, room, requests, saved } = runtime()
+  room.sessions = { a: 'group-a', removed: 'group-removed' }
+  rt.roomProgress = new Map([['call-r', { roomId: 'r', replies: [{ botId: 'a', text: 'Hello' }], speaking: 'a' }], ['other', { roomId: 'elsewhere', replies: [] }]])
+  rt.readOnly = () => 'Read only'
+  const before = structuredClone(rt.state)
+  assert.deepEqual(await rt.officeEndpoint('office-presence', { roomId: 'r' }), {
+    sessions: [{ botId: 'a', sessionId: 'group-a' }],
+    rounds: [{ callId: 'call-r', replies: [{ botId: 'a', text: 'Hello' }], speaking: 'a' }],
+  })
+  assert.deepEqual(rt.state, before)
+  assert.equal(saved(), undefined)
+  assert.equal(requests.length, 0)
+})
+
 test('AI generates and persists real character pixels on the Bot model', async () => {
   const avatar = defaultPixelAvatar({ id: 'a', name: 'Hana' })
   const { rt, bot, requests, saved } = runtime([avatar])

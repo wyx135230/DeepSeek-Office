@@ -35,8 +35,10 @@ import { MEMBER_CSS, MemberDock } from './member-status.js'
 import { USER_MESSAGE_CSS, UserMessageCell, canDrawUserMessages } from './user-message.js'
 import { noticeApprovals } from './approval-notices.js'
 import { OfficeOverlay } from './office/index.js'
+import { officeNavigation } from './office/navigation.js'
 import { OfficeConversation } from './office/conversation.js'
 import { createMeetingSpeech } from '../shared/office/meeting.js'
+import { watchOfficeSession } from './office/feed.js'
 import { OFFICE_CSS } from './office/styles.js'
 
 export const inject = ['sessions', 'uiWorkspace', 'uiConversation', 'slots', 'theme', 'layout']
@@ -346,15 +348,19 @@ export function apply(ctx) {
   const officeSpeech = createMeetingSpeech()
   const actions = {
     retainOfficeChat: id => ctx.sessions.retain(id, { source: 'controllerOperation' }),
+    officeImageUrl: (sessionId, attachment) => ctx.uiConversation.imageUrl(sessionId, attachment),
+    watchOfficeSession: (target, handlers) => watchOfficeSession(ctx.sessions, target, handlers),
+    officePresence: roomId => call('office-presence', { roomId }),
     watchOfficeSpeech: officeSpeech.watch,
     noteOfficeSpeech: officeSpeech.note,
     // The full-pane overlays sit above the conversation, so opening one must dismiss them
     // or the click appears to do nothing.
     isAgentSession: id => isAgentSessionId(id),
-    openOffice: (roomId = null) => {
+    openOffice: (roomId) => {
       if (roster.getSnapshot().rooms.length === 0) return
-      ui.set(state => ({ ...state, office: { roomId }, newChat: null, exchange: null, menu: null, palette: null, details: null, settings: null }))
+      ui.set(state => officeNavigation(state, roomId))
     },
+    navigateOffice: roomId => ui.set(state => officeNavigation(state, roomId, false)),
     closeOffice: () => ui.set(state => ({ ...state, office: null })),
     generateOfficeAvatar: (payload, signal) => after(call('office-avatar', payload, signal)),
     setOfficeTheme: payload => after(call('office-theme', payload)),

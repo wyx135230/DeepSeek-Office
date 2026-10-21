@@ -3,11 +3,13 @@ import { officeBuilding, DEFAULT_OFFICE_THEME } from '../../shared/office.js'
 import { officeClock, officeDayLabel, officeLight } from '../../shared/office/lighting.js'
 import { avatarCanvas } from './portrait.js'
 import { OfficeActivity } from './activities.js'
-import { OfficeMap } from './map.js'
+import { NearbyPrompt } from './activity-ui.js'
+import { OfficeMap, OfficeRoomDirectory } from './map.js'
 import { useEscape, usePaneLeft } from '../overlay-hooks.js'
 import { t } from '../i18n.js'
 import { useOfficeElevator, ElevatorPanel } from './elevator-ui.js'
 import { OfficeChatPanel, MeetingPrompt } from './conversation.js'
+import { OfficePhone, PhoneLauncher } from './phone.js'
 
 const STATUS = { idle: 'On a break', thinking: 'Thinking…', typing: 'Working', reading: 'Reading', speaking: 'Speaking', waiting: 'Needs you', away: 'Working elsewhere' }
 const errorText = error => error?.message ?? String(error)
@@ -36,7 +38,7 @@ export function PixelPortrait({ bot, size = 52, state = 'idle' }) {
   return h('canvas', { ref, className: 'of-portrait', style: { width: size * 20 / 28, height: size }, 'aria-hidden': true })
 }
 
-function OfficeScene({ floor, lobby, reducedMotion, selected, onSelect, onExit, onInteract, onHint, sceneApi, paused, atElevator, onReady, onSceneError, onSceneLoading }) {
+function OfficeScene({ floor, lobby, reducedMotion, selected, onSelect, onExit, onInteract, onCancelInteraction, onHint, sceneApi, paused, atElevator, onReady, onSceneError, onSceneLoading }) {
   const element = useRef(null)
   const renderer = useRef(null)
   const latest = useRef(floor)
@@ -54,7 +56,7 @@ function OfficeScene({ floor, lobby, reducedMotion, selected, onSelect, onExit, 
     const controller = new AbortController(), target = latest.current, targetId = target.id
     onSceneLoading?.(targetId)
     setError(''); setLoading(true)
-    void import('./renderer.js').then(({ createOfficeRenderer }) => cancelled ? null : createOfficeRenderer(element.current, { floor: target, lobby, reducedMotion, atElevator: latestElevator.current, signal: controller.signal, onSelect, onExit, onInteract, onHint }))
+    void import('./renderer.js').then(({ createOfficeRenderer }) => cancelled ? null : createOfficeRenderer(element.current, { floor: target, lobby, reducedMotion, atElevator: latestElevator.current, signal: controller.signal, onSelect, onExit, onInteract, onCancelInteraction, onHint }))
       .then((scene) => {
         if (!scene) return
         if (cancelled) { scene?.destroy(); return }
@@ -88,18 +90,16 @@ function OfficeClock() {
     h('span', { className: 'of-clock-phase' }, t(light.label)))
 }
 
-function CameraTools({ sceneApi }) {
+function CameraTools({ sceneApi, mode }) {
   const use = task => { task(sceneApi.current); document.querySelector('.of-scene')?.focus({ preventScroll: true }) }
-  const tool = (name, path, action) => h('button', { key: name, type: 'button', title: name, 'aria-label': name, onClick: () => use(action) },
+  const tool = (name, path, action, pressed) => h('button', { key: name, type: 'button', title: name, 'aria-label': name, 'aria-pressed': pressed, onClick: () => use(action) },
     h('svg', { width: 20, height: 20, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.5, strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': true }, h('path', { d: path })))
   return h('nav', { className: 'of-camera-tools', 'aria-label': 'Camera controls' },
-    h('span', { className: 'of-camera-title' }, 'View'),
     tool('Zoom out', 'M6 12h12', scene => scene?.zoomBy(1 / 1.2)),
     tool('Zoom in', 'M6 12h12M12 6v12', scene => scene?.zoomBy(1.2)),
-    h('i', { 'aria-hidden': true }),
     tool('Rotate view', 'M5 8a8 8 0 1 1-1 8M5 3v5h5', scene => scene?.rotateView()),
-    tool('Overview', 'M9 4H4v5m11-5h5v5M4 15v5h5m11-5v5h-5M9 9h6v6H9z', scene => scene?.overview()),
-    tool('Follow your character', 'M12 3v4m0 10v4M3 12h4m10 0h4M12 8a4 4 0 1 0 0 8a4 4 0 0 0 0-8', scene => scene?.followPlayer()))
+    tool('Overview', 'M9 4H4v5m11-5h5v5M4 15v5h5m11-5v5h-5M9 9h6v6H9z', scene => scene?.overview(), mode === 'overview'),
+    tool('Follow your character', 'M12 3v4m0 10v4M3 12h4m10 0h4M12 8a4 4 0 1 0 0 8a4 4 0 0 0 0-8', scene => scene?.followPlayer(), mode === 'follow'))
 }
 
 function MemberList({ floor, selected, onSelect, generating }) {
@@ -109,32 +109,6 @@ function MemberList({ floor, selected, onSelect, generating }) {
   }, h(PixelPortrait, { bot: member.bot, state: member.state, size: 42 }),
   h('span', { className: 'of-member-copy' }, h('strong', null, member.bot.name), h('span', null, generating[member.bot.id] === 'working' ? t('Designing appearance…') : t(STATUS[member.state]))),
   h('span', { className: 'of-status-dot', 'data-state': member.state, 'aria-hidden': true }))))
-}
-
-function CharacterCard({ member, roomId, actions, generating, onGenerate, readOnly }) {
-  const [prompt, setPrompt] = useState('')
-  const [editing, setEditing] = useState(false)
-  const [error, setError] = useState('')
-  const busy = generating[member.bot.id] === 'working'
-  const act = async (task) => { setError(''); try { await task() } catch (failure) { setError(errorText(failure)) } }
-  return h('section', { className: 'of-character-card', 'aria-label': member.bot.name },
-    h('div', { className: 'of-character-heading' }, h('div', { className: 'of-portrait-frame' }, h(PixelPortrait, { bot: member.bot, state: member.state, size: 96 })),
-      h('div', null, h('h3', null, member.bot.name), h('p', null, member.bot.role || t('Your coworker')), h('span', { className: 'of-state-label', 'data-state': member.state }, t(STATUS[member.state])))),
-    member.doing?.tool ? h('p', { className: 'of-tool-label' }, `${t('Current tool')}: ${member.doing.tool}`) : null,
-    member.state === 'waiting' ? h('button', { type: 'button', className: 'of-button of-approval', onClick: () => {
-      const group = member.approvals[0]?.roomId
-      if (member.question || !group) actions.openSession(member.bot.id)
-      else { actions.openSession(group); actions.showDetails(group) }
-    } }, t('Review request')) : null,
-    h('div', { className: 'of-character-actions' },
-      h('button', { type: 'button', className: 'of-button', onClick: () => actions.openSession(member.bot.id) }, t('Private chat')),
-      h('button', { type: 'button', className: 'of-button', disabled: readOnly, onClick: () => act(() => actions.send(roomId, `@${member.bot.name} ${t('Hello! What are you working on?')}`)) }, t('Say hello'))),
-    h('button', { type: 'button', className: 'of-text-button', disabled: busy || readOnly, onClick: () => setEditing(!editing) }, busy ? t('Designing appearance…') : t('Design AI appearance')),
-    editing ? h('form', { className: 'of-design-form', onSubmit: (event) => { event.preventDefault(); void act(() => onGenerate(member.bot.id, prompt, true)) } },
-      h('label', null, t('Describe this character'), h('textarea', { value: prompt, onChange: event => setPrompt(event.target.value), maxLength: 800, rows: 2, placeholder: t('Round glasses, a sage cardigan, a tiny notebook…') })),
-      h('p', { className: 'of-muted' }, 'Designs the hairstyle, outfit, colors and accessories of your animated coworker. Uses this Bot’s configured model; saved appearances are reused.'),
-      h('button', { type: 'submit', className: 'of-button of-primary', disabled: busy || readOnly }, t('Generate appearance'))) : null,
-    error || generating[member.bot.id]?.startsWith('error:') ? h('p', { className: 'of-error', role: 'alert' }, error || generating[member.bot.id].slice(6)) : null)
 }
 
 function OfficeComposer({ floor, selected, actions, readOnly }) {
@@ -183,16 +157,23 @@ function ThemeEditor({ floor, actions, onClose, readOnly }) {
     error ? h('p', { role: 'alert', className: 'of-error' }, error) : null)
 }
 
-export function OfficeOverlay({ useRoster, useUi, useWork, actions, SessionProvider, renderSlot }) {
+export function OfficeOverlay({ useRoster, useUi, useWork, useSessions, actions, SessionProvider, renderSlot }) {
   const roster = useRoster(value => value)
   const view = useUi(value => value.office)
+  const roomId = useUi(value => value.officeRoomId)
   const work = useWork(value => value)
   const building = useMemo(() => officeBuilding(roster, work), [roster, work])
-  if (!view || !building.enabled) return null
-  return h(OfficeWorkspace, { key: 'office-workspace', roster, view, building, actions, SessionProvider, renderSlot })
+  const retained = useRef(null)
+  if (!building.enabled) { retained.current = null; return null }
+  if (view) retained.current = view
+  else if (retained.current && roomId !== undefined && retained.current.roomId !== roomId) retained.current = { roomId }
+  if (!retained.current) return null
+  return h(OfficeWorkspace, { key: 'office-workspace', roster, view: retained.current, active: Boolean(view), building, actions, SessionProvider, renderSlot, useSessions, useUi })
 }
 
-function OfficeWorkspace({ roster, view, building, actions, SessionProvider, renderSlot }) {
+function OfficeWorkspace({ roster, view, active, building, actions, SessionProvider, renderSlot, useSessions, useUi }) {
+  const sessions = useSessions(value => value)
+  const unread = useUi(value => value.unread)
   const lobby = view.roomId === null || !building.floors.some(floor => floor.id === view.roomId)
   const floor = building.floors.find(entry => entry.id === view.roomId) ?? building.floors[0]
   const lobbyFloor = { ...floor, id: 'lobby', name: 'Reception', members: [], layout: { width: 800, height: 480, desks: [] }, theme: DEFAULT_OFFICE_THEME }
@@ -205,17 +186,85 @@ function OfficeWorkspace({ roster, view, building, actions, SessionProvider, ren
   const [board, setBoard] = useState(false)
   const [currentRoom, setCurrentRoom] = useState('')
   const [hint, setHint] = useState('Click to walk · WASD / arrows · Shift to run')
+  const [cameraMode, setCameraMode] = useState('follow')
+  const [mapExpanded, setMapExpanded] = useState(true)
+  const [mapPeek, setMapPeek] = useState(false)
+  const [hudCompact, setHudCompact] = useState(false)
+  const [phone, setPhone] = useState(false)
+  const phoneLive = useRef(false)
+  phoneLive.current = phone
+  const workspaceRef = useRef(null)
+  const drawerTrigger = useRef(null)
   const sceneApi = useRef(null)
+  const sceneWork = useRef(new Map())
   const attempted = useRef(new Set())
   const generationTokens = useRef(new Map())
   const [quiet, setQuiet] = useState(() => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false)
   const elevator = useOfficeElevator({ building, currentId: lobby ? 'lobby' : floor.id, quiet, actions, sceneApi })
   const paneLeft = usePaneLeft()
+  useEffect(() => {
+    const element = workspaceRef.current
+    const measure = () => { const box = element.getBoundingClientRect(); setHudCompact(box.width <= 760 || box.height <= 650) }
+    measure()
+    const observer = new ResizeObserver(measure)
+    observer.observe(element)
+    return () => observer.disconnect()
+  }, [])
+  const chatKey = floor.members.map(entry => `${entry.bot.id}:${entry.bot.sessionId ?? entry.bot.id}`).join(',')
+  useEffect(() => {
+    if (lobby) return undefined
+    let stopped = false, timer
+    const since = Date.now()
+    sceneWork.current.clear()
+    sceneApi.current?.resetWork()
+    const say = (id, text) => sceneApi.current?.say(id, text)
+    const stops = [actions.watchOfficeSpeech(floor.id, say)]
+    const groupWatches = new Map()
+    const watch = target => actions.watchOfficeSession(target, {
+        since, onSpeech: say,
+        onWork: value => {
+          if (!target.botId) return
+          const next = { ...value, botId: target.botId, sessionId: target.sessionId }
+          sceneWork.current.set(target.sessionId, next); sceneApi.current?.work(target.botId, next)
+        },
+      })
+    for (const target of [{ sessionId: floor.id }, ...floor.members.map(entry => ({ sessionId: entry.bot.sessionId ?? entry.bot.id, botId: entry.bot.id }))]) stops.push(watch(target))
+    const seen = new Map()
+    const tick = async () => {
+      const presence = await actions.officePresence(floor.id).catch(() => null)
+      if (stopped) return
+      if (presence) {
+        const ids = new Set(presence.sessions.map(target => target.sessionId))
+        for (const [id, stop] of groupWatches) if (!ids.has(id)) {
+          stop(); groupWatches.delete(id)
+          const value = sceneWork.current.get(id)
+          if (value) sceneApi.current?.work(value.botId, { ...value, active: false, desk: false, recentDesk: false })
+          sceneWork.current.delete(id)
+        }
+        for (const target of presence.sessions) if (!groupWatches.has(target.sessionId)) groupWatches.set(target.sessionId, watch(target))
+      }
+      for (const round of presence?.rounds ?? []) for (const [i, reply] of (round.replies ?? []).entries()) {
+        const key = `${round.callId}:${i}`
+        if (reply.kind !== undefined || reply.time < since || !reply.text || seen.get(key) === reply.text) continue
+        seen.set(key, reply.text); say(reply.botId, reply.text)
+      }
+      if (seen.size > 256) seen.clear()
+      timer = setTimeout(tick, document.hidden ? 3000 : 500)
+    }
+    void tick()
+    return () => { stopped = true; clearTimeout(timer); for (const stop of [...stops, ...groupWatches.values()]) stop(); sceneWork.current.clear() }
+  }, [lobby, floor.id, chatKey])
   const endMeeting = () => { sceneApi.current?.endMeeting(); setMeeting(false); setBoard(false); document.querySelector('.of-scene')?.focus({ preventScroll: true }) }
-  const close = () => { if (board) { setBoard(false); return }; if (meeting) { endMeeting(); return }; if (elevator.atElevator) { elevator.close(); return }; if (selected || interaction || drawer || editing) { sceneApi.current?.endActivity?.(); setSelected(null); setInteraction(null); setDrawer(null); setEditing(false); document.querySelector('.of-scene')?.focus() } else actions.closeOffice() }
-  useEscape(close)
+  const close = () => { if (drawer) { closeDrawer(); return }; if (editing) { closeEditor(); return }; if (board) { setBoard(false); return }; if (meeting) { endMeeting(); return }; if (elevator.atElevator) { elevator.close(); return }; if (interaction) { closeInteraction(); return }; if (selected) { setSelected(null); document.querySelector('.of-scene')?.focus() } else actions.closeOffice() }
+  useEscape(close, active)
   useEffect(() => { setSelected(null); setEditing(false); setDrawer(null); setInteraction(null); setCurrentRoom(''); setMeeting(false); setBoard(false) }, [floor.id, lobby, floor.members.map(entry => entry.bot.id).join(',')])
   const member = floor.members.find(entry => entry.bot.id === selected)
+  const autoCompact = hudCompact && Boolean(member || meeting || board || interaction || editing)
+  const mapOpen = autoCompact ? mapPeek : mapExpanded
+  useEffect(() => { setMapPeek(false) }, [autoCompact])
+  useEffect(() => {
+    if (active && (drawer || editing)) workspaceRef.current?.querySelector(editing ? '.of-hud-editor button' : '#office-hud-drawer button')?.focus({ preventScroll: true })
+  }, [drawer, editing, active])
   const generate = async (botId, prompt = '', regenerate = false, signal) => {
     const token = Symbol(botId)
     generationTokens.current.set(botId, token)
@@ -253,45 +302,103 @@ function OfficeWorkspace({ roster, view, building, actions, SessionProvider, ren
     }
   }, [floor.id, lobby, memberKey, Boolean(roster.readOnly)])
   const working = building.floors.reduce((sum, entry) => sum + entry.working, 0)
-  const closeInteraction = () => { sceneApi.current?.endActivity?.(); setInteraction(null); document.querySelector('.of-scene')?.focus() }
-  const closeDrawer = () => { setDrawer(null); document.querySelector('.of-scene')?.focus({ preventScroll: true }) }
+  const closeInteraction = () => { sceneApi.current?.interruptActivity?.(); setInteraction(null); document.querySelector('.of-scene')?.focus() }
+  const closeDrawer = () => {
+    setDrawer(null)
+    requestAnimationFrame(() => {
+      const trigger = drawerTrigger.current
+      if (trigger?.isConnected && trigger.getClientRects().length) trigger.focus({ preventScroll: true })
+      else document.querySelector('.of-scene')?.focus({ preventScroll: true })
+    })
+  }
+  const toggleDrawer = (name, event) => { drawerTrigger.current = event.currentTarget; setDrawer(value => value === name ? null : name) }
+  const closeEditor = () => { setEditing(false); closeDrawer() }
   const closeConversation = () => { setSelected(null); document.querySelector('.of-scene')?.focus({ preventScroll: true }) }
-  return h('section', { className: 'of-workspace of-rpg of-modern', style: { left: paneLeft, '--lift-fade': `${elevator.travel?.fadeMs ?? 550}ms`, '--lift-shift': elevator.travel?.direction === 'up' ? '28px' : '-28px' }, 'aria-label': 'DeepSeek Office', 'data-office-view': lobby ? 'lobby' : 'floor', 'data-quiet': quiet || undefined, 'data-lift-phase': elevator.travel?.phase, 'data-lift-direction': elevator.travel?.direction },
-    h(OfficeScene, { floor: lobby ? lobbyFloor : floor, lobby, reducedMotion: quiet, selected, sceneApi,
-      paused: Boolean(selected || drawer || interaction || editing || elevator.atElevator || meeting || board), onSelect: id => { setSelected(id); setDrawer(null) }, onHint: setHint,
-      atElevator: elevator.atElevator, onReady: elevator.ready, onSceneError: elevator.failed, onSceneLoading: elevator.loading,
-      onExit: elevator.enter, onInteract: target => { if (target.kind === 'meeting-board') setBoard(true); else setInteraction(target) } }),
+  const locked = elevator.atElevator || meeting || board || editing || Boolean(interaction)
+  const sceneSession = member && !meeting ? member.bot.sessionId ?? member.bot.id : meeting || board ? floor.id : null
+  const phoneBlocked = !active || meeting || board || editing || elevator.atElevator || Boolean(elevator.travel)
+  const openPhone = () => {
+    if (phoneLive.current || phoneBlocked) return
+    if (drawer) setDrawer(null)
+    if (interaction) closeInteraction()
+    setPhone(true)
+    sceneApi.current?.setPhone(true)
+  }
+  const closePhone = () => {
+    if (!phoneLive.current) return
+    setPhone(false)
+    sceneApi.current?.setPhone(false)
+    document.querySelector('.of-scene')?.focus({ preventScroll: true })
+  }
+  const openPhoneRef = useRef(openPhone)
+  openPhoneRef.current = openPhone
+  useEffect(() => {
+    if (!active) return undefined
+    const down = (event) => {
+      if (event.key.toLowerCase() !== 'p' || event.repeat || event.metaKey || event.ctrlKey || event.altKey) return
+      const target = event.target instanceof Element ? event.target : null
+      if (target?.closest('input,textarea,[contenteditable="true"]') || phoneLive.current) return
+      event.preventDefault()
+      openPhoneRef.current()
+    }
+    window.addEventListener('keydown', down)
+    return () => window.removeEventListener('keydown', down)
+  }, [active])
+  // The phone is a place to stand still and talk, so it leaves with the floor, the
+  // hidden workspace and the next scene rebuild.
+  useEffect(() => { if (!active && phoneLive.current) { setPhone(false); sceneApi.current?.setPhone(false) } }, [active])
+  useEffect(() => { if (phoneLive.current) { setPhone(false); sceneApi.current?.setPhone(false) } }, [floor.id, lobby])
+  const drawerTitle = { floors: 'Where to?', team: 'Your coworkers', rooms: 'Rooms on this floor', options: 'Office options', help: 'Getting around', credits: 'Made with care' }
+  return h('section', { ref: workspaceRef, className: 'of-workspace of-rpg of-modern', style: { left: paneLeft, visibility: active ? undefined : 'hidden', '--lift-fade': `${elevator.travel?.fadeMs ?? 550}ms`, '--lift-shift': elevator.travel?.direction === 'up' ? '28px' : '-28px' }, inert: active ? undefined : '', 'aria-hidden': !active || undefined, 'aria-label': 'DeepSeek Office', 'data-office-view': lobby ? 'lobby' : 'floor', 'data-hud-open': drawer || (editing ? 'decorate' : interaction ? 'activity' : undefined), 'data-has-dialogue': Boolean(member || meeting || board) || undefined, 'data-phone-open': phone || undefined, 'data-quiet': quiet || undefined, 'data-lift-phase': elevator.travel?.phase, 'data-lift-direction': elevator.travel?.direction },
+    h(OfficeScene, { floor: lobby ? lobbyFloor : floor, lobby, reducedMotion: quiet, selected: active ? selected : null, sceneApi,
+      paused: !active || Boolean(drawer || phone || interaction?.kind === 'meeting' || editing || elevator.atElevator || meeting || board), onSelect: id => { setSelected(id); setDrawer(null) }, onHint: setHint,
+      atElevator: elevator.atElevator, onReady: (id, scene) => { for (const value of sceneWork.current.values()) scene.work(value.botId, value); if (phoneLive.current) scene.setPhone(true); elevator.ready(id, scene) }, onSceneError: elevator.failed, onSceneLoading: elevator.loading,
+      onExit: elevator.enter, onCancelInteraction: () => setInteraction(null), onInteract: target => { if (target.kind === 'meeting-board') setBoard(true); else { setSelected(null); setInteraction(target) } } }),
     h('div', { className: 'of-lift-cover', 'aria-hidden': true }),
-    h('div', { className: 'of-left-rail' },
-      h(OfficeMap, { key: `${lobby ? 'lobby' : floor.id}:${floor.members.map(entry => entry.bot.id).join(',')}`, sceneApi, onRoomChange: setCurrentRoom }),
-      h('div', { className: 'of-hint-card' },
-        h('div', { className: 'of-game-hint', role: 'status' }, h('kbd', null, meeting ? 'Meeting' : hint.startsWith('Click') ? 'WASD' : 'E'), h('span', null, hint.replace(/^E\s+[·:—–-]?\s*/, ''))),
-        h('div', { className: 'of-hint-options' },
-          h('label', null, h('input', { type: 'checkbox', checked: quiet, onChange: event => setQuiet(event.target.checked) }), 'Quiet motion'),
-          h('div', { className: 'of-hint-actions' },
-            !lobby ? h('button', { type: 'button', className: 'of-text-button', disabled: elevator.atElevator || meeting || board, onClick: () => setEditing(true) }, 'Decorate') : null,
-            h('button', { type: 'button', className: 'of-text-button', disabled: elevator.atElevator || meeting || board, onClick: () => setDrawer('credits') }, 'Credits'))))),
-    h(CameraTools, { sceneApi }),
-    h('header', { className: 'of-game-top' },
+    phone ? h('div', { className: 'of-phone-scrim', 'aria-hidden': true }) : null,
+    h('aside', { className: 'of-hud', 'aria-label': 'Office navigation and map', 'data-map-open': mapOpen, inert: phone ? '' : undefined },
+      h('header', { className: 'of-hud-heading' },
       h('div', { className: 'of-location-card' }, h('span', { className: 'of-location-badge' }, lobby ? 'G' : `${floor.number}F`),
         h('div', { className: 'of-location-copy' }, h('h1', null, lobby ? 'Reception & lounge' : floor.name),
-          h('p', { className: 'of-location-detail' }, [currentRoom, lobby ? `${building.floors.length} offices · ${working} teammates working` : `${floor.members.length} teammates · ${floor.working} working`].filter(Boolean).join(' · ')))),
+          h('p', { className: 'of-location-detail' }, currentRoom || 'Opening the floor…'))),
+        h('button', { className: 'of-hud-icon of-hud-toggle', type: 'button', title: mapOpen ? 'Collapse map' : 'Expand map', 'aria-label': mapOpen ? 'Collapse map' : 'Expand map', 'aria-expanded': mapOpen, 'aria-controls': 'office-hud-map', onClick: () => autoCompact ? setMapPeek(value => !value) : setMapExpanded(value => !value) },
+          h('svg', { width: 16, height: 16, viewBox: '0 0 20 20', fill: 'none', stroke: 'currentColor', strokeWidth: 1.5, 'aria-hidden': true }, h('path', { d: mapOpen ? 'M5 12l5-5 5 5' : 'M5 8l5 5 5-5' }))),
+        h('button', { className: 'of-hud-icon', type: 'button', title: 'Back to chat', 'aria-label': 'Back to chat', onClick: () => actions.closeOffice() },
+          h('svg', { width: 17, height: 17, viewBox: '0 0 20 20', fill: 'none', stroke: 'currentColor', strokeWidth: 1.5, 'aria-hidden': true }, h('path', { d: 'M8 4H4v12h4m4-10 4 4-4 4M8 10h8' })))),
+      h('div', { className: 'of-hud-meta' }, h(OfficeClock), h('span', null, lobby ? `${building.floors.length} offices · ${working} working` : `${floor.members.length} teammates · ${floor.working} working`)),
+      h('div', { className: 'of-hud-map', id: 'office-hud-map' },
+        h(OfficeMap, { key: `${lobby ? 'lobby' : floor.id}:${floor.members.map(entry => entry.bot.id).join(',')}`, sceneApi, onRoomChange: setCurrentRoom, onCameraModeChange: setCameraMode, selected, members: floor.members, onRooms: event => toggleDrawer('rooms', event), directoryOpen: drawer === 'rooms', disabled: locked }),
+        h(CameraTools, { sceneApi, mode: cameraMode })),
+      h(PhoneLauncher, { open: phone, disabled: phoneBlocked, badge: Object.keys(unread ?? {}).length > 0, onToggle: openPhone }),
       h('nav', { className: 'of-game-nav', 'aria-label': 'Office navigation' },
-        h(OfficeClock),
-        h('button', { className: 'of-button', type: 'button', disabled: elevator.atElevator || meeting || board, onClick: () => setDrawer(drawer === 'floors' ? null : 'floors') }, 'Floors'),
-        !lobby ? h('button', { className: 'of-button', type: 'button', disabled: elevator.atElevator || meeting || board, onClick: () => setDrawer(drawer === 'team' ? null : 'team') }, 'Team') : null,
-        h('button', { className: 'of-button', type: 'button', onClick: () => actions.closeOffice() }, 'Back to chat'))),
+        h('button', { className: 'of-button', type: 'button', disabled: locked, 'aria-expanded': drawer === 'floors', 'aria-controls': 'office-hud-drawer', onClick: event => toggleDrawer('floors', event) }, 'Floors'),
+        !lobby ? h('button', { className: 'of-button', type: 'button', disabled: locked, 'aria-expanded': drawer === 'team', 'aria-controls': 'office-hud-drawer', onClick: event => toggleDrawer('team', event) }, 'Team') : null,
+        h('button', { className: 'of-button', type: 'button', disabled: locked, 'aria-label': 'Office options', title: 'Office options', 'aria-expanded': ['options', 'help', 'credits'].includes(drawer), 'aria-controls': 'office-hud-drawer', onClick: event => toggleDrawer('options', event) }, 'More ···'))),
+    !member && !drawer && !editing && !interaction && !locked && !phone ? h('div', { className: 'of-context-hint' },
+      h('div', { className: 'of-game-hint', role: 'status' }, h('kbd', null, hint.startsWith('Click') ? 'WASD' : 'E'), h('span', null, hint.replace(/^E\s+[·:—–-]?\s*/, '')))) : null,
+    h(NearbyPrompt, { sceneApi, active: active && !member && !drawer && !editing && !interaction && !locked && !phone }),
     elevator.atElevator ? h(ElevatorPanel, { elevator, building, currentId: lobby ? 'lobby' : floor.id, sceneApi }) : null,
-    lobby && !drawer && !elevator.atElevator ? h('button', { className: 'of-welcome-card', type: 'button', onClick: () => setDrawer('floors') },
+    lobby && !drawer && !elevator.atElevator && !phone ? h('button', { className: 'of-welcome-card', type: 'button', onClick: () => setDrawer('floors') },
       h('strong', null, 'Your team is upstairs'), h('span', null, 'Take the lift to your group’s office.'), h('b', null, 'Choose a floor')) : null,
-    drawer ? h('aside', { className: 'of-game-drawer', 'aria-label': drawer === 'floors' ? 'Floor directory' : drawer === 'team' ? 'Office members' : 'Credits' },
-      h('div', { className: 'of-section-heading' }, h('h2', null, drawer === 'floors' ? 'Where to?' : drawer === 'team' ? 'Your coworkers' : 'Made with care'), h('button', { className: 'of-text-button', type: 'button', onClick: closeDrawer }, 'Close ×')),
+    drawer ? h('aside', { className: 'of-game-drawer of-hud-drawer', id: 'office-hud-drawer', 'aria-label': drawer === 'floors' ? 'Floor directory' : drawer === 'team' ? 'Office members' : drawerTitle[drawer] },
+      h('div', { className: 'of-section-heading' }, h('h2', null, drawerTitle[drawer]), h('button', { className: 'of-text-button', type: 'button', onClick: closeDrawer, 'aria-label': 'Close panel' }, 'Close ×')),
       drawer === 'floors' ? h('div', { className: 'of-directory' },
         h('p', { className: 'of-muted' }, 'Every group has a place of its own.'),
-        !lobby ? h('button', { type: 'button', className: 'of-floor-row', onClick: () => actions.openOffice() }, h('span', { className: 'of-floor-number' }, 'G'), h('strong', null, 'Reception & lounge')) : null,
+        !lobby ? h('button', { type: 'button', className: 'of-floor-row', onClick: () => actions.openOffice(null) }, h('span', { className: 'of-floor-number' }, 'G'), h('strong', null, 'Reception & lounge')) : null,
         building.floors.map(entry => h('button', { key: entry.id, type: 'button', className: 'of-floor-row', onClick: () => { actions.openOffice(entry.id); setDrawer(null) } },
           h('span', { className: 'of-floor-number' }, `${entry.number}F`), h('span', { className: 'of-floor-copy' }, h('strong', null, entry.name), h('span', null, entry.purpose), h('small', null, `${entry.members.length} desks · ${entry.working} working`)), h('span', { className: 'of-floor-visit' }, '→'))),
         h('button', { type: 'button', className: 'of-button of-add-floor', onClick: () => { actions.closeOffice(); actions.openNewChat('group') } }, 'New group, new office'))
+        : drawer === 'rooms' ? h(OfficeRoomDirectory, { sceneApi, currentRoom, onClose: () => { setDrawer(null); document.querySelector('.of-scene')?.focus({ preventScroll: true }) } })
+        : drawer === 'options' ? h('div', { className: 'of-hud-options' },
+          !lobby ? h('button', { type: 'button', className: 'of-button', onClick: () => { setDrawer(null); setEditing(true) } }, 'Decorate') : null,
+          h('label', null, h('input', { type: 'checkbox', checked: quiet, onChange: event => setQuiet(event.target.checked) }), 'Quiet motion'),
+          h('button', { type: 'button', className: 'of-button', onClick: () => setDrawer('help') }, 'Help & shortcuts'),
+          h('button', { type: 'button', className: 'of-button', onClick: () => setDrawer('credits') }, 'Credits'))
+        : drawer === 'help' ? h('div', { className: 'of-hud-help' },
+          h('p', null, 'Click the floor to walk. Use WASD or arrow keys to move, and hold Shift to run.'),
+          h('p', null, 'Walk up to a coworker or an activity and press E to interact.'),
+          h('p', null, 'Click or drag the map to inspect a room. Map arrow keys pan; Home follows your character. Map navigation never moves your character.'),
+          h('p', null, 'Scroll to zoom. Use the map’s camera buttons to rotate, see the whole floor, or follow your character. Escape closes the current panel.'))
         : drawer === 'team' ? h('div', null, h('p', { className: 'of-muted' }, 'Choose a teammate for a quick conversation. In the room, walk over and press E.'),
           h(MemberList, { floor, selected, generating, onSelect: id => { setDrawer(null); setSelected(id) } }),
           h(OfficeComposer, { key: floor.id, floor, selected: null, actions, readOnly: Boolean(roster.readOnly) }))
@@ -300,14 +407,12 @@ function OfficeWorkspace({ roster, view, building, actions, SessionProvider, ren
             h('p', null, 'Three.js and Phaser 4 are MIT licensed. The bundled credit files record every third-party dependency.'),
             h('p', null, 'Momo the dog: Ninja Adventure by Pixel-Boy / Sparklin Labs. CC0.'), h('a', { href: 'https://github.com/sparklinlabs/superpowers-asset-packs', target: '_blank', rel: 'noreferrer' }, 'Ninja Adventure collection'), h('p', null, 'Room composition, interface, short stories and Star catcher: DeepSeek Office.')))
       : null,
-    member ? h('section', { className: 'of-game-dialogue', 'aria-label': `Talk to ${member.bot.name}` },
-      h('button', { type: 'button', className: 'of-dialogue-close of-text-button', onClick: closeConversation }, 'Close ×'),
-      h(CharacterCard, { key: member.bot.id, member, roomId: floor.id, actions, generating, onGenerate: generate, readOnly: Boolean(roster.readOnly) }),
-      h(OfficeComposer, { key: floor.id, floor, selected, actions, readOnly: Boolean(roster.readOnly) })) : null,
-    meeting || board ? h(OfficeChatPanel, { key: `meeting-${floor.id}`, board, floor, actions, SessionProvider, renderSlot, sceneApi, onClose: () => { if (board) { setBoard(false); if (!meeting) document.querySelector('.of-scene')?.focus() } else endMeeting() }, onBoard: () => setBoard(true) }) : null,
-    interaction?.kind === 'meeting' ? h(MeetingPrompt, { onClose: closeInteraction, onStart: () => { sceneApi.current?.startMeeting(); setMeeting(true); setInteraction(null); setDrawer(null); setSelected(null) } }) : null,
+    member && !meeting && !board ? h(OfficeChatPanel, { key: `talk-${floor.id}-${member.bot.id}`, active, floor, member, actions, SessionProvider, renderSlot, sceneApi, onClose: closeConversation }) : null,
+    meeting || board ? h(OfficeChatPanel, { key: `meeting-${floor.id}`, active, board, floor, actions, SessionProvider, renderSlot, sceneApi, onClose: () => { if (board) { setBoard(false); if (!meeting) document.querySelector('.of-scene')?.focus() } else endMeeting() }, onBoard: () => setBoard(true) }) : null,
+    interaction?.kind === 'meeting' ? h(MeetingPrompt, { active, onClose: closeInteraction, onStart: () => { sceneApi.current?.startMeeting(); setMeeting(true); setInteraction(null); setDrawer(null); setSelected(null) } }) : null,
     interaction && interaction.kind !== 'meeting' ? ['coffee', 'reading', 'arcade', 'meal', 'drink', 'exercise', 'rest'].includes(interaction.kind)
-      ? h(OfficeActivity, { key: `${lobby ? 'lobby' : floor.id}:${interaction.id}`, interaction, roomId: lobby ? 'lobby' : floor.id, sceneApi, onClose: closeInteraction })
+      ? h(OfficeActivity, { key: `${lobby ? 'lobby' : floor.id}:${interaction.id}`, active, interaction, roomId: lobby ? 'lobby' : floor.id, sceneApi, onClose: closeInteraction })
       : h('section', { className: 'of-prop-dialogue', role: 'dialog', 'aria-label': interaction.label }, h('h2', null, interaction.label), h('p', null, interaction.text), h('button', { type: 'button', className: 'of-button', onClick: closeInteraction }, 'Close')) : null,
-    editing ? h('div', { className: 'of-game-drawer' }, h(ThemeEditor, { floor, actions, onClose: () => setEditing(false), readOnly: Boolean(roster.readOnly) })) : null)
+    editing ? h('div', { className: 'of-game-drawer of-hud-drawer of-hud-editor' }, h(ThemeEditor, { floor, actions, onClose: closeEditor, readOnly: Boolean(roster.readOnly) })) : null,
+    phone ? h(OfficePhone, { roster, sessions, unread, actions, SessionProvider, renderSlot, quiet, onPutAway: closePhone, docked: sceneSession ? [sceneSession] : [] }) : null)
 }
