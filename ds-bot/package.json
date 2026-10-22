@@ -1,6 +1,6 @@
 {
   "name": "deepseek-office",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "description": "DeepSeek Office: persistent AI teammates in a detailed, interactive 2.5D office for DeepSeek Harness",
   "keywords": [
     "dsh-plugin",

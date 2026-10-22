@@ -2,7 +2,7 @@
 
 The DeepSeek Office plugin, based on DS Bot, for [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) (dsh). It turns dsh into a team of long-lived Bots that talk to you, to each other and in group chats. See the [project page](../README.md) for an overview, install steps and screenshots.
 
-> Version 0.7.0 brings in-scene phone chat and web reading, illustrated face-to-face dialogue, compact navigation and activity controls, an updated character model, and warmer details in work studios, coffee studios and screening rooms. Conversations still use the existing Harness Sessions and native composer. The screening-room TV remains a static display. Features, tools and the saved data format can still change.
+> Version 0.7.1 fixes updates on newer DSH profiles, verifies installed versions and attempts to restore the previous release when replacement fails. It retains the existing UI, scene and agent behavior. Version 0.7.0 brings in-scene phone chat and web reading, illustrated face-to-face dialogue, compact navigation and activity controls, an updated character model, and warmer details in work studios, coffee studios and screening rooms. Conversations still use the existing Harness Sessions and native composer. The screening-room TV remains a static display. Features, tools and the saved data format can still change.
 
 The office uses a bundled Three.js orthographic view over the existing Phaser
 simulation. Camera rotation, zoom, overview, screen-relative movement and the
@@ -62,7 +62,7 @@ checks use an isolated Web profile on Windows; see the linked verification recor
 
 ## Install
 
-Install the local `deepseek-office-0.7.0.tgz` build using DSH's Plugins page or `dsh plugin --profile web add /absolute/path/deepseek-office-0.7.0.tgz`. Disable the original `ds-bot` / legacy `dsh-bot` plugin in that profile first; both variants share the internal Bot identity. Keep your data. The Update button supports DSH 0.2.0-rc.2 and 0.2.1-rc.2: older profiles require a restart; hot-reload profiles replace the bundle live and attempt to restore the previous version if installation fails. Keep the same profile and `DSH_HOME`.
+Install the local `deepseek-office-0.7.1.tgz` build using DSH's Plugins page or `dsh plugin --profile web add /absolute/path/deepseek-office-0.7.1.tgz`. Disable the original `ds-bot` / legacy `dsh-bot` plugin in that profile first; both variants share the internal Bot identity. Keep your data. The Update button supports DSH 0.2.0-rc.2 and 0.2.1-rc.2: older profiles require a restart; hot-reload profiles replace the bundle live and attempt to restore the previous version if installation fails. Keep the same profile and `DSH_HOME`.
 
 When updating from 0.6.1 or 0.7.0, `already-installed` means the old updater cannot replace an installed package on newer DSH. In DSH Settings > Plugins, uninstall DeepSeek Office and add the new release archive or published `deepseek-office` package in the same profile. Keep the team data. If installation fails, add the previous version there again. For CLI replacement, stop the profile first, then run `dsh plugin --profile web remove deepseek-office` and `dsh plugin --profile web add deepseek-office`; use your actual profile name. See the [project install guide](../README.md#quick-start). Installing by package name requires that an owner has published that version to the selected npm registry.
 
