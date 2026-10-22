@@ -4,7 +4,7 @@
   <p><strong>A place to work, meet and take a break with your AI team.</strong></p>
   <p>A modern 2.5D office simulation for DeepSeek Harness, built on persistent AI teammates and real group conversations.</p>
   <p><strong>English</strong> · <a href="README.zh.md">简体中文</a></p>
-  <p><code>v0.7.0</code> · <code>Three.js + Phaser</code> · <code>Apache-2.0 code</code></p>
+  <p><code>v0.7.1</code> · <code>Three.js + Phaser</code> · <code>Apache-2.0 code</code></p>
   <p><a href="#highlights">Highlights</a> · <a href="#screenshots">Screenshots</a> · <a href="#quick-start">Quick start</a> · <a href="#how-to-play">How to play</a> · <a href="#roadmap">Roadmap</a></p>
 </div>
 
@@ -16,6 +16,12 @@
 Create a team, give everyone a role, and walk into its office. Each group chat becomes a floor: coworkers have desks, gather for meetings, share sofas and head off for a coffee. Their work and conversations run through the existing Harness agent system.
 
 DeepSeek Office builds on [DS Bot](https://github.com/Fei2411/DeepSeek-Bot) and uses the public plugin interfaces of [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness). Long-lived identities, memory, group collaboration, model settings and permissions remain part of the same team.
+
+## What's new in 0.7.1
+
+- **Updates on newer DSH**: fix `already-installed` by replacing the plugin through DSH's public plugin-manager APIs, preserving its enabled selection and retaining the restart path for older profiles.
+- **Version checks and recovery**: verify the installed version and attempt to restore the previous release if replacement fails. Existing 0.6.1 and 0.7.0 installations need one manual package replacement; see the update instructions below.
+- **Compatibility**: verified with DSH 0.2.0-rc.2 and 0.2.1-rc.2. UI styles, office scenes, game interactions and multi-agent behavior are unchanged.
 
 ## What's new in 0.7.0
 
@@ -85,7 +91,7 @@ Screenshots record working development builds; room arrangements vary by group. 
 
 ### 2. Get and install the package
 
-Use the `deepseek-office-0.7.0.tgz` supplied with a build or published release. If a package is not available, build it from this checkout. Source builds need Node.js **22.19 or later** and npm:
+Use the `deepseek-office-0.7.1.tgz` supplied with a build or published release. If a package is not available, build it from this checkout. Source builds need Node.js **22.19 or later** and npm:
 
 ```sh
 cd ds-bot
@@ -98,20 +104,20 @@ npm pack --pack-destination ../artifacts
 In **Harness Desktop**, open **Plugins → Add plugin**, enter the package's absolute local path, install and enable it, then restart if prompted. For example:
 
 ```text
-C:\plugins\deepseek-office-0.7.0.tgz
+C:\plugins\deepseek-office-0.7.1.tgz
 ```
 
 For **Harness Web**, with pnpm available, replace the example with your actual package path:
 
 ```sh
-npx @deepseek-ai/dsh@0.2.0-rc.2 plugin --profile web add "/absolute/path/deepseek-office-0.7.0.tgz"
+npx @deepseek-ai/dsh@0.2.0-rc.2 plugin --profile web add "/absolute/path/deepseek-office-0.7.1.tgz"
 npx @deepseek-ai/dsh@0.2.0-rc.2 web
 ```
 
 <details>
 <summary>Installing by package name after npm publication</summary>
 
-The configured npm package name is `deepseek-office`. After an owner publishes it to the selected registry, the add-plugin field can accept `deepseek-office` or a version such as `deepseek-office@0.7.0`. Uploading source to GitHub alone does not publish that npm package. Use the local package if registry publication has not happened.
+The configured npm package name is `deepseek-office`. After an owner publishes it to the selected registry, the add-plugin field can accept `deepseek-office` or a version such as `deepseek-office@0.7.1`. Uploading source to GitHub alone does not publish that npm package. Use the local package if registry publication has not happened.
 
 The plugin lives in the repository's `ds-bot/` subdirectory. A repository URL is therefore not interchangeable with a published package name.
 
@@ -198,7 +204,7 @@ The first six room slots are shuffled deterministically from the group ID, so re
 <a id="current-scope"></a>
 ## Current scope
 
-Version **0.7.0** combines the playable office with in-scene phone chat, a mobile-style web reader, face-to-face dialogue and a first decoration pass for work studios, coffee studios and screening rooms. Other leisure facilities keep their existing furnishings. The decoration pass preserves room layouts, paths, seats, interaction targets and the existing UI; group messages, agent work and permissions use the original Harness flow.
+Version **0.7.1** combines the playable office with in-scene phone chat, a mobile-style web reader, face-to-face dialogue and a first decoration pass for work studios, coffee studios and screening rooms. Other leisure facilities keep their existing furnishings. The decoration pass preserves room layouts, paths, seats, interaction targets and the existing UI; group messages, agent work and permissions use the original Harness flow.
 
 The scene currently has **no cross-device multiplayer, cloud-synchronized avatar placement, free-form building editor or management economy**. The screening-room TV has a static display; video playback is not implemented. The 3D view requires WebGL. The in-game phone is a feature of the desktop scene; mobile devices are not the primary target yet.
 

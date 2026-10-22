@@ -4,7 +4,7 @@
   <p><strong>和你的 AI 团队，在同一间办公室里工作、开会与休息。</strong></p>
   <p>基于 DeepSeek Harness 的现代 2.5D 办公室模拟，让长期智能体与真实群聊拥有一个可以走进去的空间。</p>
   <p><a href="README.md">English</a> · <strong>简体中文</strong></p>
-  <p><code>v0.7.0</code> · <code>Three.js + Phaser</code> · <code>代码采用 Apache-2.0</code></p>
+  <p><code>v0.7.1</code> · <code>Three.js + Phaser</code> · <code>代码采用 Apache-2.0</code></p>
   <p><a href="#highlights">项目亮点</a> · <a href="#screenshots">画面展示</a> · <a href="#quick-start">安装教程</a> · <a href="#how-to-play">怎么玩</a> · <a href="#roadmap">开发计划</a></p>
 </div>
 
@@ -16,6 +16,12 @@
 创建一个团队，给每个人安排职责，然后走进他们的办公室。每个群聊都会变成一层楼：同事拥有自己的工位，会集合开会、共坐沙发，也会起身去喝杯咖啡。他们的工作与对话仍通过原有 Harness 智能体系统运行。
 
 DeepSeek Office 基于 [DS Bot](https://github.com/Fei2411/DeepSeek-Bot)，使用 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 的公开插件接口。长期身份、记忆、群聊协作、模型设置和权限控制，都继续属于同一支 AI 团队。
+
+## 0.7.1 更新内容
+
+- **兼容新版 DSH 更新**：修复 `already-installed`，通过 DSH 公开插件管理 API 替换插件包，保留启用状态，并兼容旧版配置安装后重启的流程。
+- **版本核验与失败恢复**：检查实际安装版本，替换失败时尝试装回旧版本。已有 0.6.1、0.7.0 用户需先手动替换一次插件包，详见下方升级说明。
+- **兼容性验证**：已在 DSH 0.2.0-rc.2 和 0.2.1-rc.2 上验证。UI 样式、办公室场景、游戏互动和多智能体行为均未改动。
 
 ## 0.7.0 更新内容
 
@@ -85,7 +91,7 @@ DeepSeek Office 基于 [DS Bot](https://github.com/Fei2411/DeepSeek-Bot)，使�
 
 ### 2. 获取并安装插件包
 
-使用构建产物或已发布版本提供的 `deepseek-office-0.7.0.tgz`。如果尚未提供安装包，可以在下载或克隆本仓库后自行构建。源码构建需要 Node.js **22.19 或更高版本**和 npm：
+使用构建产物或已发布版本提供的 `deepseek-office-0.7.1.tgz`。如果尚未提供安装包，可以在下载或克隆本仓库后自行构建。源码构建需要 Node.js **22.19 或更高版本**和 npm：
 
 ```sh
 cd ds-bot
@@ -98,20 +104,20 @@ npm pack --pack-destination ../artifacts
 在 **Harness 桌面端**中打开「插件 → 添加插件」，填写安装包的绝对本地路径，安装并启用；如提示重启，请完全退出后重新打开。例如：
 
 ```text
-C:\plugins\deepseek-office-0.7.0.tgz
+C:\plugins\deepseek-office-0.7.1.tgz
 ```
 
 使用 **Harness Web** 时，需要可用的 pnpm，并将下面的示例替换为实际安装包路径：
 
 ```sh
-npx @deepseek-ai/dsh@0.2.0-rc.2 plugin --profile web add "/absolute/path/deepseek-office-0.7.0.tgz"
+npx @deepseek-ai/dsh@0.2.0-rc.2 plugin --profile web add "/absolute/path/deepseek-office-0.7.1.tgz"
 npx @deepseek-ai/dsh@0.2.0-rc.2 web
 ```
 
 <details>
 <summary>发布到 npm 后，如何通过包名安装？</summary>
 
-项目配置的 npm 包名是 `deepseek-office`。所有者将包发布到所选安装源后，可以在「添加插件」中输入 `deepseek-office`，或指定 `deepseek-office@0.7.0`。仅将源码上传到 GitHub 不会自动发布 npm 包；尚未发布时，请使用本地安装包。
+项目配置的 npm 包名是 `deepseek-office`。所有者将包发布到所选安装源后，可以在「添加插件」中输入 `deepseek-office`，或指定 `deepseek-office@0.7.1`。仅将源码上传到 GitHub 不会自动发布 npm 包；尚未发布时，请使用本地安装包。
 
 插件实际位于仓库的 `ds-bot/` 子目录，因此仓库地址与已发布包名不是相同的安装入口。
 
@@ -198,7 +204,7 @@ npx @deepseek-ai/dsh@0.2.0-rc.2 web
 <a id="current-scope"></a>
 ## 当前版本范围
 
-**0.7.0** 在可走动的办公室中整合手机聊天、手机网页阅读器、当面对话，以及工作室、咖啡室和观影房的首轮装饰细化；其它休闲设施保留现有布置。装饰细化保留房间布局、通路、座位、互动目标与现有 UI，群聊消息、智能体工作和权限仍使用原有 Harness 流程。
+**0.7.1** 在可走动的办公室中整合手机聊天、手机网页阅读器、当面对话，以及工作室、咖啡室和观影房的首轮装饰细化；其它休闲设施保留现有布置。装饰细化保留房间布局、通路、座位、互动目标与现有 UI，群聊消息、智能体工作和权限仍使用原有 Harness 流程。
 
 当前 **尚未实现跨设备联机、角色位置的云端同步、自由建造编辑器或经营经济系统**；观影房电视为静态画面，尚不支持视频播放。3D 场景需要 WebGL。场景内的手机属于桌面玩法，移动设备暂不是主要适配目标。
 
