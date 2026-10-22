@@ -117,7 +117,11 @@ The plugin lives in the repository's `ds-bot/` subdirectory. A repository URL is
 
 </details>
 
-To update an existing DeepSeek Office installation, add the new package through the same profile's Plugins page or public CLI, then restart Harness. Keep the existing team data and use the same profile and `DSH_HOME`.
+To update an existing DeepSeek Office installation, use the plugin's Update button. Older DSH profiles install the package for the next restart; newer DSH profiles with hot reload remove the old bundle before installing the new version, preserving its enabled selection. If the replacement fails, the updater attempts to reinstall the previous version. Keep the same profile, `DSH_HOME` and team data.
+
+**Upgrading from 0.6.1 or 0.7.0:** those versions' Update button can report `already-installed` on newer DSH. Use DSH Settings > Plugins to uninstall **DeepSeek Office** and add `deepseek-office` again (or select the new release archive). Remove only the plugin package; keep the team data. This one-time replacement installs the corrected updater. If installation fails after removal, add the previous version from the same Plugins page. With the public CLI, stop that profile first, run `dsh plugin --profile web remove deepseek-office`, then `dsh plugin --profile web add deepseek-office`, and start it again; replace `web` with your actual profile.
+
+The updater is regression-tested with DSH 0.2.0-rc.2 and 0.2.1-rc.2. It uses DSH's public plugin-manager APIs.
 
 ### 3. Create your first office
 
