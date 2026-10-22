@@ -1,7 +1,7 @@
 // Updates: compare this package's version with the newest release where it was
 // installed from (the npm registry, or a GitHub tag for a versioned git install)
-// and, when the user asks, reinstall it through DSH's plugin manager. A new version
-// runs from the next DSH start. A linked or local checkout is never offered one.
+// and, when the user asks, reinstall it through DSH's plugin manager. HMR profiles
+// replace it live; older profiles require a restart. Local checkouts never update.
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
@@ -110,6 +110,58 @@ const releasesUrl = () => {
 
 export const STARS_TTL_MS = 60 * 60_000
 
+const applied = result => !result?.error && ['applied', 'restart-required'].includes(result?.application)
+const changeError = result => new Error(result?.error?.diagnostic ?? result?.error?.code ?? `install ${result?.application ?? 'failed'}`)
+const recovery = 'Open DSH Settings > Plugins to reinstall DeepSeek Office in the same profile. Keep the existing team data.'
+
+async function installedVersion(service, result, expected) {
+  if (!applied(result)) throw changeError(result)
+  let version = cleanVersion(result.version)
+  if (version === null && typeof service.listBundles === 'function') {
+    version = cleanVersion((await service.listBundles()).find(bundle => bundle.name === PKG.name)?.version)
+  }
+  if (version !== null && version !== expected) {
+    throw new Error(`Installed version ${version} differs from requested version ${expected}. ${recovery}`)
+  }
+  return version ?? expected
+}
+
+async function installUpdate(service, chosen) {
+  const options = chosen.registry ? { registry: chosen.registry } : {}
+  let result = await service.installBundle(chosen.spec, options)
+  if (result?.error?.code === 'already-installed') {
+    if (typeof service.removeBundle !== 'function' || typeof service.listBundles !== 'function') throw new Error(recovery)
+    const own = (await service.listBundles()).find(bundle => bundle.name === PKG.name)
+    if (!own?.installed || !own.removable || typeof own.source !== 'string' || own.source !== chosen.source
+      || (own.version !== undefined && cleanVersion(own.version) !== PKG.version)) throw new Error(recovery)
+    const previous = sourceOf(own.source).kind === 'registry' ? `${PKG.name}@${PKG.version}` : own.source
+    const replacementOptions = { ...options, enabled: own.enabled }
+    // Capture the manager before removal: HMR disposes our Context and channel,
+    // but the manager owns the operation and this promise continues without them.
+    const removed = await service.removeBundle(PKG.name)
+    if (!applied(removed)) throw new Error(`${changeError(removed).message}. ${recovery}`)
+    try {
+      result = await service.installBundle(chosen.spec, replacementOptions)
+      return await installedVersion(service, result, chosen.version)
+    } catch (error) {
+      try {
+        // An accepted package can still declare the wrong version. Unload that
+        // replacement before restoring, since HMR also refuses to overwrite it.
+        if (applied(result)) {
+          const removedReplacement = await service.removeBundle(PKG.name)
+          if (!applied(removedReplacement)) throw changeError(removedReplacement)
+        }
+        const restored = await service.installBundle(previous, replacementOptions)
+        await installedVersion(service, restored, PKG.version)
+      } catch (restoreError) {
+        throw new Error(`${error?.message ?? error}. Restoring the previous version failed: ${restoreError?.message ?? restoreError}. ${recovery}`)
+      }
+      throw new Error(`${error?.message ?? error}. The previous version was restored.`)
+    }
+  }
+  return installedVersion(service, result, chosen.version)
+}
+
 export function install(rt) {
   const { ctx, config } = rt
   const enabled = config.updateCheck !== false
@@ -170,7 +222,8 @@ export function install(rt) {
   }
 
   async function runCheck() {
-    const source = sourceOf(await installSpecOf(ctx))
+    const spec = await installSpecOf(ctx)
+    const source = sourceOf(spec)
     status.source = source.kind
     let found = null
     try {
@@ -189,7 +242,7 @@ export function install(rt) {
       return
     }
     status.latest = found.version
-    target = newer(found.version, status.current) ? found : null
+    target = newer(found.version, status.current) ? { ...found, source: spec } : null
   }
 
   /** Ask where the package came from for its newest version; a fresh check ignores the last answer. */
@@ -210,12 +263,9 @@ export function install(rt) {
     if (typeof service?.installBundle !== 'function') throw new Error('The DSH plugin manager is not available in this profile')
     const chosen = target
     Object.assign(status, { phase: 'installing', error: null })
-    void Promise.resolve(service.installBundle(chosen.spec, chosen.registry ? { registry: chosen.registry } : {}))
-      .then((result) => {
-        if (result?.error || !['applied', 'restart-required'].includes(result?.application)) {
-          throw new Error(result?.error?.diagnostic ?? result?.error?.code ?? `install ${result?.application ?? 'failed'}`)
-        }
-        Object.assign(status, { phase: 'installed', installed: cleanVersion(result.version) ?? chosen.version })
+    void installUpdate(service, chosen)
+      .then((version) => {
+        Object.assign(status, { phase: 'installed', installed: version })
       })
       .catch((error) => {
         rt.warn('ds-bot: update to %s failed: %s', chosen.spec, error?.message ?? error)

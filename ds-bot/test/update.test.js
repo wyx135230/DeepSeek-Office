@@ -6,12 +6,12 @@ import { afterEach, test } from 'node:test'
 import { cleanVersion, install, newer, sourceOf } from '../src/host/update.js'
 
 const PKG = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'))
-const flush = async () => { for (let index = 0; index < 8; index += 1) await Promise.resolve() }
+const flush = () => new Promise(resolve => setImmediate(resolve))
 const realFetch = globalThis.fetch
 afterEach(() => { globalThis.fetch = realFetch })
 
 // The update module alone, on a stub plugin manager and a scripted fetch.
-function start({ source, registries, answers = {}, result = { application: 'restart-required' }, config = {}, profileDir }) {
+function start({ source, registries, answers = {}, result = { application: 'restart-required' }, config = {}, profileDir, manager = {} }) {
   const fetched = []
   const installs = []
   const warnings = []
@@ -26,6 +26,7 @@ function start({ source, registries, answers = {}, result = { application: 'rest
     listBundles: async () => [{ name: 'other', source: 'other@^1.0.0' }, ...(source === undefined ? [] : [{ name: PKG.name, source }])],
     registries: async () => registries ?? { registry: null, fallbackRegistries: ['https://registry.npmmirror.com/'], resolved: 'https://registry.npmjs.org/' },
     installBundle: async (spec, options) => { installs.push([spec, options]); return typeof result === 'function' ? result() : result },
+    ...manager,
   }
   const rt = {
     ctx: { get: name => (name === 'pluginManager' ? pluginManager : name === 'profileContext' && profileDir ? { dir: profileDir } : undefined), effect() {} },
@@ -33,8 +34,213 @@ function start({ source, registries, answers = {}, result = { application: 'rest
     warn: (...args) => warnings.push(args),
   }
   install(rt)
-  return { rt, fetched, installs, warnings }
+  return { rt, fetched, installs, warnings, pluginManager }
 }
+
+const updateOffer = {
+  source: `${PKG.name}@^${PKG.version}`,
+  answers: { [`https://registry.npmjs.org/${PKG.name}/latest`]: { version: '9.0.0' } },
+}
+
+test('HMR updates remove the installed bundle and continue after the caller is disposed', async () => {
+  const calls = []
+  let rt
+  const fixture = start({ ...updateOffer, manager: {
+    listBundles: async () => [{ name: PKG.name, source: updateOffer.source, version: PKG.version, installed: true, removable: true, enabled: true }],
+    removeBundle: async name => {
+      calls.push(['remove', name])
+      rt.ctx.get = () => { throw new Error('caller disposed') }
+      return { application: 'applied' }
+    },
+    installBundle: async (spec, options) => {
+      calls.push(['install', spec, options])
+      return calls.length === 1 ? { application: 'failed', error: { code: 'already-installed' } } : { application: 'applied', version: '9.0.0' }
+    },
+  } })
+  rt = fixture.rt
+  await rt.updateCheck()
+  rt.updateStart()
+  rt.updateStart()
+  await flush()
+  assert.equal(rt.updateView().phase, 'installed')
+  assert.deepEqual(calls, [
+    ['install', `${PKG.name}@9.0.0`, { registry: 'https://registry.npmjs.org/' }],
+    ['remove', PKG.name],
+    ['install', `${PKG.name}@9.0.0`, { registry: 'https://registry.npmjs.org/', enabled: true }],
+  ])
+})
+
+test('a failed HMR replacement reinstalls the previous exact version and selection', async () => {
+  const calls = []
+  const { rt, warnings } = start({ ...updateOffer, manager: {
+    listBundles: async () => [{ name: PKG.name, source: updateOffer.source, version: PKG.version, installed: true, removable: true, enabled: false }],
+    removeBundle: async () => ({ application: 'applied' }),
+    installBundle: async (spec, options) => {
+      calls.push([spec, options])
+      return calls.length === 1 ? { application: 'failed', error: { code: 'already-installed' } }
+        : calls.length === 2 ? { application: 'failed', error: { code: 'operation-error', diagnostic: 'network offline' } }
+          : { application: 'applied', version: PKG.version }
+    },
+  } })
+  await rt.updateCheck()
+  rt.updateStart()
+  await flush()
+  assert.equal(rt.updateView().phase, 'failed')
+  assert.match(rt.updateView().error, /network offline/)
+  assert.deepEqual(calls[2], [`${PKG.name}@${PKG.version}`, { registry: 'https://registry.npmjs.org/', enabled: false }])
+  assert.equal(warnings.length, 1)
+})
+
+test('a refused removal never starts a replacement installation', async () => {
+  const { rt, installs } = start({ ...updateOffer, result: { application: 'failed', error: { code: 'already-installed' } }, manager: {
+    listBundles: async () => [{ name: PKG.name, source: updateOffer.source, version: PKG.version, installed: true, removable: true, enabled: true }],
+    removeBundle: async () => ({ application: 'failed', error: { code: 'bundle-in-use' } }),
+  } })
+  await rt.updateCheck()
+  rt.updateStart()
+  await flush()
+  assert.equal(rt.updateView().phase, 'failed')
+  assert.match(rt.updateView().error, /bundle-in-use/)
+  assert.equal(installs.length, 1)
+})
+
+test('a manager without removal support gives actionable recovery without removing anything', async () => {
+  const { rt, installs } = start({ ...updateOffer, result: { application: 'failed', error: { code: 'already-installed' } } })
+  await rt.updateCheck()
+  rt.updateStart()
+  await flush()
+  assert.match(rt.updateView().error, /DSH.*Plugins/)
+  assert.equal(installs.length, 1)
+})
+
+test('a synchronous manager error settles the update instead of leaving it installing', async () => {
+  const { rt } = start({ ...updateOffer, manager: { installBundle() { throw new Error('manager unavailable') } } })
+  await rt.updateCheck()
+  assert.doesNotThrow(() => rt.updateStart())
+  await flush()
+  assert.equal(rt.updateView().phase, 'failed')
+})
+
+test('a manager reporting an older installed version cannot report the update as successful', async () => {
+  const { rt } = start({ ...updateOffer, result: { application: 'restart-required', version: PKG.version } })
+  await rt.updateCheck()
+  rt.updateStart()
+  await flush()
+  assert.equal(rt.updateView().phase, 'failed')
+  assert.match(rt.updateView().error, /version/)
+})
+
+test('a protected bundle or changed version is never removed by a stale updater', async () => {
+  for (const bundle of [{ removable: false }, { version: '8.0.0' }]) {
+    let removed = false
+    const { rt } = start({ ...updateOffer, result: { application: 'failed', error: { code: 'already-installed' } }, manager: {
+      listBundles: async () => [{ name: PKG.name, source: updateOffer.source, version: PKG.version, installed: true, removable: true, enabled: true, ...bundle }],
+      removeBundle: async () => { removed = true; return { application: 'applied' } },
+    } })
+    await rt.updateCheck()
+    rt.updateStart()
+    await flush()
+    assert.equal(rt.updateView().phase, 'failed')
+    assert.equal(removed, false)
+  }
+})
+
+test('a failed rollback reports both failures and the official recovery path', async () => {
+  let attempt = 0
+  const { rt } = start({ ...updateOffer, manager: {
+    listBundles: async () => [{ name: PKG.name, source: updateOffer.source, installed: true, removable: true, enabled: true }],
+    removeBundle: async () => ({ application: 'applied' }),
+    installBundle: async () => {
+      attempt += 1
+      if (attempt === 1) return { application: 'failed', error: { code: 'already-installed' } }
+      throw new Error(attempt === 2 ? 'download failed' : 'restore failed')
+    },
+  } })
+  await rt.updateCheck()
+  rt.updateStart()
+  await flush()
+  assert.equal(rt.updateView().phase, 'failed')
+  assert.match(rt.updateView().error, /download failed.*restore failed.*DSH Settings > Plugins/)
+  assert.equal(attempt, 3)
+})
+
+test('a failed GitHub replacement restores its original versioned source and path', async () => {
+  const source = 'github:example/office#v0.6.1&path:/ds-bot'
+  const calls = []
+  const { rt } = start({ source, answers: { 'https://api.github.com/repos/example/office/releases/latest': { tag_name: 'v9.0.0' } }, manager: {
+    listBundles: async () => [{ name: PKG.name, source, installed: true, removable: true, enabled: true }],
+    removeBundle: async () => ({ application: 'applied' }),
+    installBundle: async spec => {
+      calls.push(spec)
+      return calls.length === 1 ? { application: 'failed', error: { code: 'already-installed' } }
+        : calls.length === 2 ? { application: 'cancelled' } : { application: 'applied' }
+    },
+  } })
+  await rt.updateCheck()
+  rt.updateStart()
+  await flush()
+  assert.equal(rt.updateView().phase, 'failed')
+  assert.deepEqual(calls, ['github:example/office#v9.0.0&path:/ds-bot', 'github:example/office#v9.0.0&path:/ds-bot', source])
+})
+
+test('an older manager without result.version is checked against its bundle inventory', async () => {
+  const { rt } = start({ ...updateOffer, result: { application: 'restart-required' }, manager: {
+    listBundles: async () => [{ name: PKG.name, source: updateOffer.source, version: PKG.version }],
+  } })
+  await rt.updateCheck()
+  rt.updateStart()
+  await flush()
+  assert.equal(rt.updateView().phase, 'failed')
+  assert.match(rt.updateView().error, /version/)
+})
+
+test('a cached update cannot remove a bundle whose install source has changed', async () => {
+  for (const source of ['link:/work/office', 'github:someone/office#v0.7.0']) {
+    let reads = 0
+    let removed = false
+    const { rt } = start({ ...updateOffer, result: { application: 'failed', error: { code: 'already-installed' } }, manager: {
+      listBundles: async () => [{ name: PKG.name, source: ++reads === 1 ? updateOffer.source : source, version: PKG.version, installed: true, removable: true, enabled: true }],
+      removeBundle: async () => { removed = true; return { application: 'applied' } },
+    } })
+    await rt.updateCheck()
+    rt.updateStart()
+    await flush()
+    assert.equal(removed, false)
+    assert.equal(rt.updateView().phase, 'failed')
+  }
+})
+
+test('an applied replacement with the wrong version is removed before restoring the old one', async () => {
+  let attempt = 0
+  let removals = 0
+  const { rt } = start({ ...updateOffer, manager: {
+    listBundles: async () => [{ name: PKG.name, source: updateOffer.source, version: PKG.version, installed: true, removable: true, enabled: true }],
+    removeBundle: async () => { removals += 1; return { application: 'applied' } },
+    installBundle: async () => ++attempt === 1 ? { application: 'failed', error: { code: 'already-installed' } }
+      : { application: 'applied', version: PKG.version },
+  } })
+  await rt.updateCheck()
+  rt.updateStart()
+  await flush()
+  assert.equal(rt.updateView().phase, 'failed')
+  assert.match(rt.updateView().error, /version.*previous version was restored/)
+  assert.equal(removals, 2)
+  assert.equal(attempt, 3)
+})
+
+test('restoration with an unexpected manifest version is reported as failed recovery', async () => {
+  let attempt = 0
+  const { rt } = start({ ...updateOffer, manager: {
+    listBundles: async () => [{ name: PKG.name, source: updateOffer.source, version: PKG.version, installed: true, removable: true, enabled: true }],
+    removeBundle: async () => ({ application: 'applied' }),
+    installBundle: async () => ++attempt === 1 ? { application: 'failed', error: { code: 'already-installed' } }
+      : attempt === 2 ? { application: 'failed', error: { code: 'operation-error' } } : { application: 'applied', version: '8.0.0' },
+  } })
+  await rt.updateCheck()
+  rt.updateStart()
+  await flush()
+  assert.match(rt.updateView().error, /Restoring the previous version failed.*version/)
+})
 
 test('versions compare in semver order and lose their v and build metadata', () => {
   assert.equal(cleanVersion('v1.2.3+build.5'), '1.2.3')

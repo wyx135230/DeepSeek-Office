@@ -62,7 +62,9 @@ checks use an isolated Web profile on Windows; see the linked verification recor
 
 ## Install
 
-Install the local `deepseek-office-0.7.0.tgz` build using DSH's Plugins page or `dsh plugin --profile web add /absolute/path/deepseek-office-0.7.0.tgz`. Disable the original `ds-bot` / legacy `dsh-bot` plugin in that profile first; both variants share the internal Bot identity. Keep your data. To update DeepSeek Office, install the new package in the same profile and restart Harness, keeping the same `DSH_HOME`. See the [project install guide](../README.md#quick-start). Installing by the `deepseek-office` package name requires that an owner has published it to the selected npm registry.
+Install the local `deepseek-office-0.7.0.tgz` build using DSH's Plugins page or `dsh plugin --profile web add /absolute/path/deepseek-office-0.7.0.tgz`. Disable the original `ds-bot` / legacy `dsh-bot` plugin in that profile first; both variants share the internal Bot identity. Keep your data. The Update button supports DSH 0.2.0-rc.2 and 0.2.1-rc.2: older profiles require a restart; hot-reload profiles replace the bundle live and attempt to restore the previous version if installation fails. Keep the same profile and `DSH_HOME`.
+
+When updating from 0.6.1 or 0.7.0, `already-installed` means the old updater cannot replace an installed package on newer DSH. In DSH Settings > Plugins, uninstall DeepSeek Office and add the new release archive or published `deepseek-office` package in the same profile. Keep the team data. If installation fails, add the previous version there again. For CLI replacement, stop the profile first, then run `dsh plugin --profile web remove deepseek-office` and `dsh plugin --profile web add deepseek-office`; use your actual profile name. See the [project install guide](../README.md#quick-start). Installing by package name requires that an owner has published that version to the selected npm registry.
 
 ## 2.5D offices
 

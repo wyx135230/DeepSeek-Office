@@ -117,7 +117,11 @@ npx @deepseek-ai/dsh@0.2.0-rc.2 web
 
 </details>
 
-已有 DeepSeek Office 时，在同一配置的插件页面或通过公开 CLI 添加新版安装包，再完全重启 Harness。保留团队数据，继续使用原配置和 `DSH_HOME`。
+已有 DeepSeek Office 时，可以使用插件内的 Update 按钮。旧版 DSH 配置安装后需要重启；支持热重载的新版 DSH 会先移除旧插件包，再安装新版，并保留启用状态。替换失败时，更新器会尝试装回旧版本。继续使用原配置、`DSH_HOME` 和团队数据。
+
+**从 0.6.1 或 0.7.0 升级：**这两个版本的 Update 按钮在新版 DSH 中可能报 `already-installed`。请在 DSH「设置 > 插件」中卸载 **DeepSeek Office**，再添加 `deepseek-office`（或选择新版发布安装包）。只移除插件包，保留团队数据；这次手动替换后才能获得修正的更新器。如果移除后安装失败，可在同一插件页面添加原版本。通过公开 CLI 操作时，先停止该配置，再运行 `dsh plugin --profile web remove deepseek-office`、`dsh plugin --profile web add deepseek-office`，然后重新启动；将 `web` 换成实际使用的配置名。
+
+更新器已在 DSH 0.2.0-rc.2 和 0.2.1-rc.2 上做回归验证，仅使用 DSH 公开的插件管理 API。
 
 ### 3. 创建第一层办公室
 
